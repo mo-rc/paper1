@@ -1,0 +1,9 @@
+results/*
+!results/.gitkeep
+data/raw/*
+!data/raw/.gitkeep
+__pycache__/
+*.pyc
+.venv/
+*.pt
+*.ckpt
