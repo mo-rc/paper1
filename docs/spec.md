@@ -1,6 +1,6 @@
 # Specification (pre-registration), Paper 1
 
-Version 1.0. Frozen before any run. Changes are dated amendments at the end of this file, made before the affected run.
+Version 1.1. Repository: https://github.com/mo-rc/paper1. Frozen before any run. Changes are dated amendments at the end of this file, made before the affected run.
 
 ## 1. Scope
 
@@ -11,6 +11,7 @@ Research questions:
 - RQ2 Generalisation: does it hold on unseen span/load without retraining?
 - RQ3 Automation efficiency: per-design and total cost versus enumeration, GA and DE, training included.
 - RQ4 Quality: gap to the lightest feasible catalogue section.
+- RQ5 Diversity: does a generative policy return several distinct feasible near-optimal sections?
 
 No method is assumed to win. Claims follow section 11.
 
@@ -96,23 +97,38 @@ Test files are not touched during tuning.
 
 All methods use the same checker, catalogue C, objective and contexts.
 
-RL: one-step categorical choice of a section from C given normalised (L, w). Algorithms: PPO (primary), DQN, discrete SAC. TD3 and DDPG are not used (continuous action). Reward modes: Lagrangian, feasibility_gated, shaped. Training budget: 200,000 checker calls per run. Seeds 0-4.
+Design variable type: each UB is a fixed rolled section (h, b, tw, tf, r are tabulated together), so the choice is categorical over C. Continuous dimensions would describe custom or welded sections, which are out of scope.
+
+RL formulations (state includes normalised L and w):
+- F1 Refinement MDP: a rule-based trial section (first section in mass order with Wpl above the required value) is revised step by step. Observation: context, current section geometry and mass, and the utilisation of every check. Actions: one mass step up or down, one depth series up or down, accept. Horizon at most 12 steps.
+- F2 Constructive MDP: the section is built in two choices, depth series then variant within the series.
+
+Algorithms (PPO, SAC, TD3 and DDPG are not used here):
+- Dueling Double DQN with prioritised replay, on F1.
+- Conditional GFlowNet (trajectory balance), on F2. It samples sections with probability proportional to reward, which gives diverse designs.
+
+Reward modes (the Lagrangian, feasibility-gated and shaped modes of the earlier project are not reused):
+- R1 Terminal-sparse with safety termination: accepting a feasible section gives -m/m_trial; an infeasible acceptance ends the episode with a fixed penalty larger in magnitude than any feasible value; step cost 0.01. No shaping.
+- R2 Potential-based shaping: R1 plus F(s,s') = gamma*Phi(s') - Phi(s), with Phi = -m/m_trial - 2*max(0, max utilisation - 1). Shaping preserves the optimal policy.
+- R3 Reward-proportional: R(x) = exp(-beta*m/m_trial) if feasible, 1e-6 otherwise; beta in {10, 20, 40}, selected on V.
+
+Configurations: DDQN-R1, DDQN-R2, GFlowNet-R3; seeds 0-4; 15 runs. Training budget: 200,000 checker calls per run (every step counts). Greedy output (arg max) is the policy output for S1 and S2; sampled output is reported separately.
 
 Baselines:
 - Enumeration (reference; also timed).
 - GA and DE on the integer index in mass-ascending order; evaluation budgets 10, 20, 50, |C| calls per context; seeds 0-4.
 - Random search at the same budgets.
-- kNN and a supervised classifier trained on enumeration labels. Label count matched to the RL budget: floor(200,000/|C|) = 2,197 labels; sensitivity 20,000. Label cost counted as |C| checker calls each.
+- Supervised classifier (MLP) trained on enumeration labels. Label count matched to the RL budget: floor(200,000/|C|) = 2,197 labels; sensitivity 20,000. Label cost counted as |C| checker calls each. It tests whether RL is needed at all.
 
-Tuning: 12 configurations per algorithm (RL, GA, DE, classifier), drawn by a fixed seed, selected on V. A configuration change counts only if validation mean gap improves by at least 0.5 percentage points with feasibility not lower.
+Tuning: 12 configurations per algorithm (DDQN, GFlowNet, GA, DE, classifier), drawn by a fixed seed, selected on V. A configuration change counts only if validation mean gap improves by at least 0.5 percentage points with feasibility not lower.
 
 Repair or post-processing (for example nearest-passing section, top-k with checker) is reported separately from raw policy output. Raw top-1, best-of-k with checker, and enumeration fallback are three distinct metrics; fallback is not RL success.
 
-Several options: sample the stochastic policy; report the number of distinct feasible sections and their mass spread.
+Diversity: K = 50 samples (or evaluations) per context for GFlowNet, DDQN (softmax of Q, temperature selected on V), GA, DE and random search. Metric: number of distinct feasible sections within 5% of the optimal mass.
 
 ## 10. Metrics
 
-Feasibility rate (verified), gap, exact-match rate, utilisations (governing check), checker calls, wall-clock time per design (single CPU thread for search and inference; hardware recorded), training cost, total cost for N design tasks = training + N * inference, crossover N*, seed-to-seed spread. Training and inference are always separate; in-distribution (T1, T2) and extrapolation (T3) are separate; single-seed and five-seed results are separate.
+Feasibility rate (verified), gap, exact-match rate, utilisations (governing check), checker calls, wall-clock time per design (single CPU thread for search and inference; hardware recorded), diversity count, training cost, total cost for N design tasks = training + N * inference, crossover N*, seed-to-seed spread. Training and inference are always separate; in-distribution (T1, T2) and extrapolation (T3) are separate; single-seed and five-seed results are separate.
 
 ## 11. Claims and success criteria
 
@@ -121,9 +137,10 @@ RL is called safe and accurate in range only if, on T1 and T2:
 - S2 median gap <= 2% (T1) and <= 3% (T2) for the median seed.
 
 Efficiency is claimed only if N* is finite and below N_ref = 10,000 design tasks, with seed spread shown.
+Diversity (RQ5): the GFlowNet is called diverse if its median count is at least 3 on contexts where the reference has at least 3 such sections.
 Extrapolation (T3) is reported descriptively without a threshold.
 
-"Method A better than B on metric M" requires both: paired exact permutation test over contexts, Holm-adjusted p < 0.05 within the comparison family; and a mean difference of at least 1 percentage point of gap or 20% of time. Otherwise: no difference claimed. If enumeration, GA, DE, kNN or the classifier is better, that is reported as such. If S1 or S2 fail, the paper reports RL as not meeting the criteria.
+"Method A better than B on metric M" requires both: paired exact permutation test over contexts, Holm-adjusted p < 0.05 within the comparison family; and a mean difference of at least 1 percentage point of gap or 20% of time, or 1 section for diversity. Otherwise: no difference claimed. If enumeration, GA, DE or the classifier is better, that is reported as such. If S1 or S2 fail, the paper reports RL as not meeting the criteria.
 
 ## 12. Verification and gates
 
@@ -142,8 +159,8 @@ One representative beam; S355 UB only; fully restrained; UDL only; fixed dead/li
 
 ## 14. Time
 
-Total project time budget: 1 month maximum. Run budgets in section 9 are sized to fit; any reduction is a dated amendment made before the affected run.
+No external deadline. Self-set target: about 1 month. Run budgets in section 9 (15 RL runs) are sized to fit; extending the target is allowed and needs no change to the claims.
 
 ## Amendments
 
-(none)
+- 2026-10-17, v1.1, before any run: RL formulations, algorithms and reward modes replaced; kNN removed; RQ5 and diversity metric added; repository link added.
