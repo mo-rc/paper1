@@ -7,3 +7,6 @@ __pycache__/
 .venv/
 *.pt
 *.ckpt
+data/catalogue/*
+!data/catalogue/.gitkeep
+*.egg-info/
