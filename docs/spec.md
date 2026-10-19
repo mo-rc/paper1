@@ -1,4 +1,4 @@
-# Specification (pre-registration), Paper 1
+# Specification (pre-registration)
 
 Version 1.2. Repository: https://github.com/mo-rc/paper1. Frozen before any run. Changes are dated amendments at the end of this file, made before the affected run.
 
@@ -210,3 +210,33 @@ Defaults below are working assumptions, not approvals. Each item that changes th
 
 - 2026-10-17, v1.1, before any run: RL formulations, algorithms and reward modes replaced; kNN removed; RQ5 and diversity metric added; repository link added.
 - 2026-10-17, v1.2, before any run: reward definitions corrected (v1.1 R3 gave every feasible section a reward below the infeasible reward of 1e-6 for beta 20 and 40, since m/m_trial >= 1 gives exp(-beta) < 1e-6; for beta 10 any feasible section heavier than 1.38 m_trial); F0 direct-choice formulation, ordered-scan and heuristic baselines added; seeds raised to 10 and statistics redefined (exact tests over contexts removed; 5 seeds give p >= 0.0625); feasibility audit, abstention, saturation rule and cost accounting added; checker rules clarified; assumptions listed as decisions awaiting confirmation.
+
+### Amendment A1 (2026-10-19, before any run): scope, LTB, contexts, one-paper design
+
+Governing narrative: `docs/proposal.md` (one journal paper). Status: **proposed, awaiting supervisor acceptance**. Nothing in this repository has been run for the study; no RL training occurs before Gates 1 to 3 are accepted. Where this amendment and an earlier section disagree, the amendment governs for the stage named in the table below; the earlier text is kept unchanged as the record.
+
+**Superseded statements**
+
+| Earlier statement (spec line) | Status after A1 |
+|---|---|
+| UB only, S355 only, no welded sections; fully restrained (section 1) | Stage 1 keeps UB only and S355. Restraint is a context parameter; restraint_ratio = 0 is the full-restraint case of v1.2. Stage 2 adds welded symmetric I-sections (S355) |
+| Design variable is categorical over C; continuous dimensions out of scope (section 9) | Holds for Stage 1. Stage 2 uses continuous or increment-based dimensions |
+| "PPO, SAC, TD3 and DDPG are not used" (section 9) | Replaced: Stage 1 runs a tournament (DQN, Double DQN, Dueling Double DQN, discrete PPO, discrete SAC, policy gradient, GFlowNet for diversity); Stage 2 uses SAC, TD3, DDPG, PPO, branching dueling Q-networks and hybrids |
+| Scope: fully restrained, UDL only, fixed dead/live share, fixed bearing length (section 13) | Fully restrained and fixed dead/live share no longer hold (contexts below). UDL only and fixed bearing length (100 mm) still hold |
+| Context = (span, factored UDL), dead/live share fixed (sections 3 and 8) | Context = seven parameters, `ub_rl.context.Context`: span, tributary width, dead load, live load, restraint ratio, deflection rule, depth cap. Ranges and splits fixed at Gate 3 after the feasibility audit; the v1.2 box remains the full-restraint sub-study |
+| Self-set target of about one month (section 14) | About 28 weeks |
+
+**Changes**
+
+1. **LTB check** (`restraint_ratio` = Lcr / L in `CheckerConfig`). 0 means continuous restraint and reproduces v1.2 exactly. EN 1993-1-1 6.3.2.3, rolled I sections; Mcr per NCCI SN003; load at the shear centre by default, top-flange loading (zg = +h/2) as a sensitivity; curve b for h/b <= 2, curve c otherwise; lambda_LT,0 = 0.4, beta = 0.75. **Moment factors:** C1 = 1.127, C2 = 0.454, kc = 0.94 (UDL) only when restraints are at the supports (ratio 1). For 0 < ratio < 1 the conservative uniform-moment values C1 = 1, kc = 1 are used at the maximum design moment (C2 kept for top-flange loading); per-segment moment diagrams are a Gate 2 sensitivity, not part of the primary study.
+2. **Seven-parameter contexts** implemented as `Context` with `Checker.evaluate_context` and `lightest_feasible_context`. The depth cap is a design requirement, not a code check: contexts with no feasible section are abstention cases and are not removed.
+3. **Deflection rules** per context: `var360` (variable load, L/360, primary), `var200` (variable, L/200), `tot250` (total characteristic, L/250).
+4. **Algorithms:** pre-registered tournament under equal tuning effort (12 configurations each, selection on V only).
+5. **Reward families** (R1 to R3 as in section 9; R3 is for F2 only):
+   - **R-A = R1**, reference-relative terminal reward. **R-B = R2**, potential-based shaping.
+   - **R-C Lagrangian (new):** the environment reward is R1, unchanged. The training loss adds lambda * c with cost c = max(0, max utilisation - 1) of the accepted design and a multiplier updated by dual ascent (lambda <- max(0, lambda + eta * (mean c - 0))). The ordering rule holds for the environment reward; feasibility is judged on verified output, never on the penalised objective.
+   - **R-D call-penalized (new):** R1 with step cost kappa per checker call, with kappa * N_max <= 0.5 (N_max = maximum calls per episode), so the margin of 1 between feasible and infeasible returns is preserved, as for the 0.001 step cost of R1. For the expensive-check regime the cost is reported in calls and in assumed seconds per call, not folded into reward values.
+   - The ordering "every feasible return exceeds every infeasible return" is asserted per validation context for every family; constants are frozen at Gate 4.
+6. **Stage 2** (welded symmetric I-sections) carries the main result; Stage 1 is the controlled testbed; both are reported in one paper. Success criteria (proposal section 7) use a non-inferiority test for custom sections: the one-sided upper bound of the median mass gap to the best per-problem optimizer must not exceed 2 percentage points, with Holm correction over the pre-registered comparisons.
+
+Unchanged: catalogue and parser, material rules, self-weight in the checker, call-count cost accounting, ten-seed exact tests with Holm correction, saturation rule, gates.

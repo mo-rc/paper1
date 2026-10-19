@@ -12,16 +12,21 @@ Clauses (BS EN 1993-1-1:2005+A1:2014 with UK NA; BS EN 1993-1-5:2006; sources in
                   flange contribution ignored), applies if hw/tw > 72 eps / eta
   interaction     6.2.8 at stations along the span; EN 1993-1-5 7.1 where shear buckling applies
   web bearing     EN 1993-1-5 6.2-6.5, type (c), unstiffened web, load at the end
-  LTB             recorded: full restraint, chi_LT = 1.0, no check
+  LTB             restraint_ratio = 0: recorded, chi_LT = 1.0, no check (spec v1.2).
+                  restraint_ratio > 0: EN 1993-1-1 6.3.2.3 (rolled I), Mcr per NCCI SN003 (spec amendment A1)
   deflection      7.2, 5 q L^4 / (384 E Iy) <= L / ratio
 """
 from dataclasses import dataclass, asdict
 
+import copy
+from dataclasses import replace
+
 import numpy as np
 
-from .config import CheckerConfig, E_STEEL, G_ACC
+from .config import CheckerConfig, E_STEEL, G_ACC, G_STEEL
+from .context import DEFLECTION_RULES
 
-CHECKS = ("bending", "shear", "shear_buckling", "bending_shear", "web_bearing", "deflection")
+CHECKS = ("bending", "shear", "shear_buckling", "bending_shear", "web_bearing", "deflection", "ltb")
 LTB_RECORD = "continuous lateral restraint; chi_LT = 1.0; EN 1993-1-1 6.3.2 not applied"
 CHI_LT = 1.0
 
@@ -59,6 +64,10 @@ class CheckResult:
     F_Rd: float
     deflection: float  # mm
     deflection_limit: float  # mm
+    # LTB (amendment A1); defaults keep v1.2 behaviour when restraint_ratio = 0
+    u_ltb: float = 0.0
+    M_cr: float = float("nan")  # kNm, nan when LTB is not evaluated
+    M_b_Rd: float = float("nan")  # kNm, nan when LTB is not evaluated
 
     def as_dict(self):
         return asdict(self)
@@ -120,6 +129,14 @@ class Checker:
         # Web bearing, kN
         self.F_Rd, self.lam_F = _web_bearing(self.hw, tw, tf, b, self.fy, cfg.stiff_bearing_ss, cfg.bearing_c, gM1)
 
+        # LTB constants (used only if cfg.restraint_ratio > 0); Iw in dm6 -> mm6
+        self.h = h
+        self.Iz = c["Iz"] * 1e4
+        self.It = c["It"] * 1e4
+        self.Iw = c["Iw"] * 1e12
+        self.W_ltb = np.where(self.cls <= 2, Wpl, Wel)
+        self.alpha_LT = np.where(h / b <= 2.0, 0.34, 0.49)  # Table 6.5 rolled I: curve b (h/b <= 2), curve c (> 2)
+
         self.self_w = self.mass * G_ACC / 1e3 if cfg.self_weight else np.zeros(self.n)  # kN/m
         self.frac = np.linspace(0.0, 1.0, cfg.n_stations)
 
@@ -153,7 +170,16 @@ class Checker:
 
         u_int = self._interaction(i, L, wEd)
 
-        U = np.stack([u_bend, u_shear, u_sb, u_int, u_brg, u_def], axis=1)
+        if cfg.restraint_ratio > 0:
+            Mcr, chi, Mb = self._ltb(i, L, MEd)
+            u_ltb = MEd / Mb
+        else:
+            Mcr = np.full(len(i), np.nan)
+            chi = np.ones(len(i))
+            Mb = np.full(len(i), np.nan)
+            u_ltb = np.zeros(len(i))
+
+        U = np.stack([u_bend, u_shear, u_sb, u_int, u_brg, u_def, u_ltb], axis=1)
         ok_class = self.cls[i] <= 3
         feasible = (U <= 1.0 + cfg.tol).all(axis=1) & ok_class
         return {
@@ -161,7 +187,41 @@ class Checker:
             "u_web_bearing": u_brg, "u_deflection": u_def, "U": U, "feasible": feasible,
             "section_class": self.cls[i], "w_Ed": wEd, "M_Ed": MEd, "V_Ed": VEd,
             "deflection": delta, "deflection_limit": np.full(len(i), dlim),
+            "u_ltb": u_ltb, "M_cr": Mcr, "chi_LT": chi, "M_b_Rd": Mb,
         }
+
+    def _ltb(self, i, L, MEd):
+        """EN 1993-1-1 6.3.2.3 for rolled I sections, simply supported, UDL, restraint at the supports and at
+        spacing Lcr = restraint_ratio * L (spec amendment A1). Returns (Mcr, chi_LT, Mb_Rd), kNm.
+
+        Mcr = C1 pi^2 E Iz / Lcr^2 * [ sqrt(Iw/Iz + Lcr^2 G It / (pi^2 E Iz) + (C2 zg)^2) - C2 zg ]  (NCCI SN003, k = kw = 1)
+        zg = 0 (load at shear centre) or +h/2 (load on the top flange, destabilising).
+        lambda = sqrt(W fy / Mcr); chi from Phi with alpha (curve b/c by h/b), lambda0, beta; chi <= 1, <= 1/lambda^2;
+        modified by f (6.3.2.3(2)) with kc. C1 and kc are the UDL values only when the restraints are at the supports
+        (restraint_ratio = 1); for intermediate restraints the conservative uniform-moment values are used.
+        LTB is ignored if lambda <= lambda0 or MEd/Mcr <= lambda0^2 (6.3.2.2(4))."""
+        cfg = self.cfg
+        Lcr = cfg.restraint_ratio * L * 1e3  # mm
+        Iz, It, Iw = self.Iz[i], self.It[i], self.Iw[i]
+        zg = self.h[i] / 2.0 if cfg.ltb_load_position == "top_flange" else np.zeros(len(Iz))
+        t = cfg.ltb_C2 * zg
+        full_span = cfg.restraint_ratio >= 1.0
+        C1 = cfg.ltb_C1 if full_span else cfg.ltb_segment_C1
+        kc = cfg.ltb_kc if full_span else cfg.ltb_segment_kc
+        Mcr = C1 * np.pi ** 2 * E_STEEL * Iz / Lcr ** 2 * (
+            np.sqrt(Iw / Iz + Lcr ** 2 * G_STEEL * It / (np.pi ** 2 * E_STEEL * Iz) + t ** 2) - t) / 1e6  # kNm
+        W, fy = self.W_ltb[i], self.fy[i]
+        Mrk = W * fy / 1e6  # kNm
+        lam = np.sqrt(Mrk / Mcr)
+        lam0, beta = cfg.ltb_lambda0, cfg.ltb_beta
+        phi = 0.5 * (1.0 + self.alpha_LT[i] * (lam - lam0) + beta * lam ** 2)
+        chi = 1.0 / (phi + np.sqrt(np.maximum(phi ** 2 - beta * lam ** 2, 0.0)))
+        chi = np.minimum(np.minimum(chi, 1.0), 1.0 / lam ** 2)
+        f = np.minimum(1.0 - 0.5 * (1.0 - kc) * (1.0 - 2.0 * (lam - 0.8) ** 2), 1.0)
+        chi = np.minimum(chi / f, 1.0)
+        no_ltb = (lam <= lam0) | (MEd / Mcr <= lam0 ** 2)
+        chi = np.where(no_ltb, 1.0, chi)
+        return Mcr, chi, chi * Mrk / cfg.gamma_M1
 
     def _interaction(self, i, L, wEd):
         """Maximum over stations of the bending-shear utilisation (6.2.8, or EN 1993-1-5 7.1 if shear buckling applies)."""
@@ -203,13 +263,48 @@ class Checker:
             u_bending=float(U[0]), u_shear=float(U[1]), u_shear_buckling=float(U[2]),
             u_bending_shear=float(U[3]), u_web_bearing=float(U[4]), u_deflection=float(U[5]),
             section_class=cls, fy=float(self.fy[i]), shear_buckling_applies=bool(self.sb[i]),
-            ltb=LTB_RECORD, chi_LT=CHI_LT,
+            ltb=self._ltb_record(), chi_LT=float(e["chi_LT"][0]),
             w_Ed=float(e["w_Ed"][0]), M_Ed=float(e["M_Ed"][0]), V_Ed=float(e["V_Ed"][0]),
             M_c_Rd=float(self.Mc[i]), V_pl_Rd=float(self.Vpl[i]),
             V_b_Rd=float(self.Vbw[i]) if self.sb[i] else float("nan"),
             F_Rd=float(self.F_Rd[i]), deflection=float(e["deflection"][0]),
             deflection_limit=float(e["deflection_limit"][0]),
+            u_ltb=float(U[6]), M_cr=float(e["M_cr"][0]), M_b_Rd=float(e["M_b_Rd"][0]),
         )
+
+    def with_config(self, **changes):
+        """Cheap copy sharing the section arrays, with changed run-time settings. Only settings read inside evaluate()
+        may be changed (variable_share, restraint and LTB factors, deflection rule); those baked in at construction
+        (bearing, shear eta, gammas used for precomputed resistances) require a new Checker."""
+        new = copy.copy(self)
+        new.cfg = replace(self.cfg, **changes)
+        return new
+
+    def evaluate_context(self, ctx, idx=None):
+        """Evaluate every section (or idx) for a Context. 'feasible_code' = all code checks pass; 'feasible' also
+        requires h <= depth_cap (a design requirement, not a code check)."""
+        w, phi = ctx.factored_udl(self.cfg.gamma_G, self.cfg.gamma_Q)
+        mode, ratio = DEFLECTION_RULES[ctx.deflection_rule]
+        K = self.with_config(variable_share=phi, restraint_ratio=ctx.restraint_ratio,
+                             deflection_load=mode, deflection_ratio=ratio)
+        e = K.evaluate(ctx.span, w, idx)
+        i = np.arange(len(self.h)) if idx is None else np.atleast_1d(np.asarray(idx))
+        depth_ok = np.ones(len(i), bool) if ctx.depth_cap is None else self.h[i] <= ctx.depth_cap
+        e["feasible_code"] = e["feasible"].copy()
+        e["depth_ok"] = depth_ok
+        e["feasible"] = e["feasible"] & depth_ok
+        return e
+
+    def lightest_feasible_context(self, ctx):
+        """Index of the lightest feasible section in mass order, or None (abstain) if no section is feasible."""
+        ok = self.evaluate_context(ctx)["feasible"]
+        return int(np.argmax(ok)) if ok.any() else None
+
+    def _ltb_record(self):
+        r = self.cfg.restraint_ratio
+        if r > 0:
+            return f"EN 1993-1-1 6.3.2.3, Lcr/L = {r:g}, load at {self.cfg.ltb_load_position}"
+        return LTB_RECORD
 
     def lightest_feasible(self, L, w):
         """Enumeration over the catalogue in its own order; index of the first feasible section or -1.
