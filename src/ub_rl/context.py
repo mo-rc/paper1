@@ -5,6 +5,11 @@ train/validation/test split are fixed at Gate 3, not here."""
 from dataclasses import dataclass
 from typing import Optional
 
+# Restraint ratios allowed in contexts: 0 (continuous), (0, RESTRAINT_MAX_INTERIOR] or exactly 1. The LTB model is not
+# monotone between about 0.5 and 1: Mcr falls to ratio 0.99 and then rises at 1.0 because the UDL factors (C1 = 1.127,
+# kc = 0.94) apply only at ratio 1. Contexts in (0.5, 1) are rejected so that a policy cannot learn that artefact.
+RESTRAINT_MAX_INTERIOR = 0.5
+
 # rule name -> (deflection load, span ratio). var360 is the primary rule (spec section 3).
 DEFLECTION_RULES = {
     "var360": ("variable", 360.0),
@@ -29,8 +34,9 @@ class Context:
                 raise ValueError(f"{name} must be positive")
         if self.dead < 0 or self.live < 0 or self.dead + self.live <= 0:
             raise ValueError("dead and live loads must be >= 0 and not both zero")
-        if not 0.0 <= self.restraint_ratio <= 1.0:
-            raise ValueError("restraint_ratio must be in [0, 1]")
+        r = self.restraint_ratio
+        if not (r == 0.0 or 0.0 < r <= RESTRAINT_MAX_INTERIOR or r == 1.0):
+            raise ValueError(f"restraint_ratio must be 0, in (0, {RESTRAINT_MAX_INTERIOR}] or 1 (LTB model artefact in between)")
         if self.deflection_rule not in DEFLECTION_RULES:
             raise ValueError(f"deflection_rule must be one of {sorted(DEFLECTION_RULES)}")
         if self.depth_cap is not None and not self.depth_cap > 0:

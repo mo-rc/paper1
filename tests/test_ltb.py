@@ -92,10 +92,15 @@ def test_ltb_governs_when_unrestrained(C):
     assert r.governing == "ltb" and r.u_ltb > 1.0 and r.chi_LT < 1.0 and "6.3.2.3" in r.ltb
 
 
-def test_curve_selection_by_h_over_b(C):
+def test_curve_selection_by_h_over_b(C, Cplus):  # UK NA: curve d above h/b = 3.1 (confirmed by the Blue Book table, Gate 2)
     K = Checker(C)
     h, b = C.cols["h"], C.cols["b"]
-    assert np.all(K.alpha_LT[h / b <= 2.0] == 0.34) and np.all(K.alpha_LT[h / b > 2.0] == 0.49)
+    hb = h / b
+    assert np.all(K.alpha_LT[hb <= 2.0] == 0.34)
+    assert np.all(K.alpha_LT[(hb > 2.0) & (hb <= 3.1)] == 0.49)
+    assert np.all(K.alpha_LT[hb > 3.1] == 0.76)
+    hb_all = Cplus.cols["h"] / Cplus.cols["b"]
+    assert (hb_all > 3.1).sum() == 16 and (hb > 3.1).sum() == 10  # 10 in C (1016x305 series); 533x165 and 610x178 are '+' rows
 
 
 def test_ltb_config_validation():
@@ -132,3 +137,14 @@ def test_reference_optimum_by_restraint_ratio(C):
     for ratio, name in expected.items():
         K = _K(C, restraint_ratio=ratio)
         assert C.names[K.lightest_feasible(L, W)] == name
+
+
+def test_public_ltb_resistance_matches_internal_ltb_for_full_span(C):
+    """ltb_resistance (used for table comparison) agrees with the evaluate() path when no MEd exemption applies."""
+    K = _K(C, restraint_ratio=1.0)
+    e = K.evaluate(L, 90.0)  # heavy load so MEd/Mcr exceeds the exemption for most sections
+    Mcr, chi, Mb = K.ltb_resistance(np.arange(len(C.names)), L, C1=1.127, kc=0.94)
+    keep = e["M_Ed"] / e["M_cr"] > 0.16
+    assert np.allclose(Mcr, e["M_cr"], rtol=1e-12) and np.allclose(chi[keep], e["chi_LT"][keep], rtol=1e-12)
+    assert np.allclose(Mb[keep], e["M_b_Rd"][keep], rtol=1e-12)
+    assert np.all(chi <= 1.0) and np.all(Mb <= Checker(C).Mc * (1 + 1e-12))

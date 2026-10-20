@@ -127,7 +127,7 @@ class Checker:
         self.lam_w = lam_w
 
         # Web bearing, kN
-        self.F_Rd, self.lam_F = _web_bearing(self.hw, tw, tf, b, self.fy, cfg.stiff_bearing_ss, cfg.bearing_c, gM1)
+        self.F_Rd, self.lam_F = _web_bearing(self.hw, tw, tf, b, self.fy, cfg.stiff_bearing_ss, cfg.bearing_c, gM1, cfg.bearing_rule)
 
         # LTB constants (used only if cfg.restraint_ratio > 0); Iw in dm6 -> mm6
         self.h = h
@@ -135,7 +135,9 @@ class Checker:
         self.It = c["It"] * 1e4
         self.Iw = c["Iw"] * 1e12
         self.W_ltb = np.where(self.cls <= 2, Wpl, Wel)
-        self.alpha_LT = np.where(h / b <= 2.0, 0.34, 0.49)  # Table 6.5 rolled I: curve b (h/b <= 2), curve c (> 2)
+        # UK NA to 6.3.2.3, rolled I: curve b (h/b <= 2), c (2 < h/b <= 3.1), d (h/b > 3.1); alpha 0.34, 0.49, 0.76.
+        # Verified against the Blue Book Mb,Rd table (docs/verification_record.md, Gate 2).
+        self.alpha_LT = np.select([h / b <= 2.0, h / b <= 3.1], [0.34, 0.49], default=0.76)
 
         self.self_w = self.mass * G_ACC / 1e3 if cfg.self_weight else np.zeros(self.n)  # kN/m
         self.frac = np.linspace(0.0, 1.0, cfg.n_stations)
@@ -194,20 +196,32 @@ class Checker:
         """EN 1993-1-1 6.3.2.3 for rolled I sections, simply supported, UDL, restraint at the supports and at
         spacing Lcr = restraint_ratio * L (spec amendment A1). Returns (Mcr, chi_LT, Mb_Rd), kNm.
 
-        Mcr = C1 pi^2 E Iz / Lcr^2 * [ sqrt(Iw/Iz + Lcr^2 G It / (pi^2 E Iz) + (C2 zg)^2) - C2 zg ]  (NCCI SN003, k = kw = 1)
-        zg = 0 (load at shear centre) or +h/2 (load on the top flange, destabilising).
-        lambda = sqrt(W fy / Mcr); chi from Phi with alpha (curve b/c by h/b), lambda0, beta; chi <= 1, <= 1/lambda^2;
-        modified by f (6.3.2.3(2)) with kc. C1 and kc are the UDL values only when the restraints are at the supports
-        (restraint_ratio = 1); for intermediate restraints the conservative uniform-moment values are used.
-        LTB is ignored if lambda <= lambda0 or MEd/Mcr <= lambda0^2 (6.3.2.2(4))."""
+        C1 and kc are the UDL values only when the restraints are at the supports (restraint_ratio = 1); for
+        intermediate restraints the conservative uniform-moment values are used (see CheckerConfig). LTB is ignored if
+        lambda <= lambda0 or MEd/Mcr <= lambda0^2 (6.3.2.2(4)). See _ltb_core for the formulas."""
         cfg = self.cfg
-        Lcr = cfg.restraint_ratio * L * 1e3  # mm
-        Iz, It, Iw = self.Iz[i], self.It[i], self.Iw[i]
-        zg = self.h[i] / 2.0 if cfg.ltb_load_position == "top_flange" else np.zeros(len(Iz))
-        t = cfg.ltb_C2 * zg
         full_span = cfg.restraint_ratio >= 1.0
-        C1 = cfg.ltb_C1 if full_span else cfg.ltb_segment_C1
-        kc = cfg.ltb_kc if full_span else cfg.ltb_segment_kc
+        return self._ltb_core(i, cfg.restraint_ratio * L * 1e3,
+                              cfg.ltb_C1 if full_span else cfg.ltb_segment_C1, cfg.ltb_C2,
+                              cfg.ltb_kc if full_span else cfg.ltb_segment_kc, cfg.ltb_load_position, MEd)
+
+    def ltb_resistance(self, i, Lcr_m, C1=1.0, kc=None, C2=0.0, load_position="shear_centre"):
+        """Mcr, chi_LT and Mb,Rd (kNm) for sections i at unrestrained length Lcr_m for a given C1, as tabulated in design
+        tables (no MEd-dependent exemption). kc defaults to 1/sqrt(C1) (equals Table 6.6 for the UDL and point-load
+        cases; treat as an assumption to confirm). Used by scripts/compare_bluebook.py."""
+        i = np.atleast_1d(np.asarray(i, dtype=int))
+        kc = 1.0 / np.sqrt(C1) if kc is None else kc
+        return self._ltb_core(i, Lcr_m * 1e3, C1, C2, kc, load_position, None)
+
+    def _ltb_core(self, i, Lcr, C1, C2, kc, load_position, MEd):
+        """Mcr = C1 pi^2 E Iz / Lcr^2 * [ sqrt(Iw/Iz + Lcr^2 G It / (pi^2 E Iz) + (C2 zg)^2) - C2 zg ]  (NCCI SN003, k = kw = 1)
+        zg = 0 (load at shear centre) or +h/2 (load on the top flange, destabilising).
+        lambda = sqrt(W fy / Mcr); chi from Phi with alpha (curve b/c/d by h/b), lambda0, beta; chi <= 1, <= 1/lambda^2;
+        modified by f (6.3.2.3(2)) with kc."""
+        cfg = self.cfg
+        Iz, It, Iw = self.Iz[i], self.It[i], self.Iw[i]
+        zg = self.h[i] / 2.0 if load_position == "top_flange" else np.zeros(len(Iz))
+        t = C2 * zg
         Mcr = C1 * np.pi ** 2 * E_STEEL * Iz / Lcr ** 2 * (
             np.sqrt(Iw / Iz + Lcr ** 2 * G_STEEL * It / (np.pi ** 2 * E_STEEL * Iz) + t ** 2) - t) / 1e6  # kNm
         W, fy = self.W_ltb[i], self.fy[i]
@@ -219,7 +233,9 @@ class Checker:
         chi = np.minimum(np.minimum(chi, 1.0), 1.0 / lam ** 2)
         f = np.minimum(1.0 - 0.5 * (1.0 - kc) * (1.0 - 2.0 * (lam - 0.8) ** 2), 1.0)
         chi = np.minimum(chi / f, 1.0)
-        no_ltb = (lam <= lam0) | (MEd / Mcr <= lam0 ** 2)
+        no_ltb = lam <= lam0
+        if MEd is not None:
+            no_ltb = no_ltb | (MEd / Mcr <= lam0 ** 2)
         chi = np.where(no_ltb, 1.0, chi)
         return Mcr, chi, chi * Mrk / cfg.gamma_M1
 
@@ -296,9 +312,9 @@ class Checker:
         return e
 
     def lightest_feasible_context(self, ctx):
-        """Index of the lightest feasible section in mass order, or None (abstain) if no section is feasible."""
+        """Index of the lightest feasible section in mass order, or -1 (abstain) if none is feasible, as lightest_feasible."""
         ok = self.evaluate_context(ctx)["feasible"]
-        return int(np.argmax(ok)) if ok.any() else None
+        return int(np.argmax(ok)) if ok.any() else -1
 
     def _ltb_record(self):
         r = self.cfg.restraint_ratio
@@ -313,21 +329,21 @@ class Checker:
         return int(np.argmax(ok)) if ok.any() else -1
 
 
-def _web_bearing(hw, tw, tf, bf, fy, ss, c, gM1):
+def _web_bearing(hw, tw, tf, bf, fy, ss, c, gM1, rule="higher"):
     """EN 1993-1-5 6.2-6.5, load type (c) (applied through one flange adjacent to an unstiffened end), kN.
 
-    ss is limited to hw (6.3(1)). m2 depends on lambda_F, which depends on m2: both assumptions are evaluated
-    and a branch is valid only if it is self-consistent; the higher valid resistance is taken (SCI AD 378)."""
+    ss is limited to hw (6.3(1)). m2 depends on lambda_F, which depends on m2: both assumptions are evaluated.
+    rule "higher" (default, SCI AD 378 and the Blue Book tables): a branch is valid only if it is self-consistent and
+    the higher valid resistance is taken. rule "sequential" (EN text order, public SCI worked example): m2 = 0 unless
+    lambda_F(m2 = 0) > 0.5, then the m2 > 0 result; it is lower where two valid solutions exist."""
     E = E_STEEL
     s = np.minimum(ss, hw)
     kF = np.minimum(2.0 + 6.0 * (s + c) / hw, 6.0)
     Fcr = 0.9 * kF * E * tw ** 3 / hw
     le = np.minimum(kF * E * tw ** 2 / (2.0 * fy * hw), s + c)
     m1 = fy * bf / (fy * tw)
-    best = np.full_like(hw, -np.inf)
-    worst = np.full_like(hw, np.inf)
-    lam_sel = np.zeros_like(hw)
-    for slender in (False, True):
+
+    def branch(slender):
         m2 = 0.02 * (hw / tf) ** 2 if slender else np.zeros_like(hw)
         ly = np.minimum.reduce([
             s + 2.0 * tf * (1.0 + np.sqrt(m1 + m2)),
@@ -336,11 +352,13 @@ def _web_bearing(hw, tw, tf, bf, fy, ss, c, gM1):
         ])
         lam = np.sqrt(ly * tw * fy / Fcr)
         chi = np.minimum(0.5 / lam, 1.0)
-        F = fy * chi * ly * tw / gM1 / 1e3
-        valid = (lam > 0.5) if slender else (lam <= 0.5)
-        take = valid & (F > best)
-        lam_sel = np.where(take, lam, lam_sel)
-        best = np.where(valid, np.maximum(best, F), best)
-        worst = np.minimum(worst, F)
-    # At least one branch is valid by construction (larger m2 gives larger lambda_F); fall back to the lower value
-    return np.where(np.isfinite(best), best, worst), lam_sel
+        return fy * chi * ly * tw / gM1 / 1e3, lam
+
+    F0, lam0 = branch(False)
+    F1, lam1 = branch(True)
+    if rule == "sequential":
+        return np.where(lam0 <= 0.5, F0, F1), np.where(lam0 <= 0.5, lam0, lam1)
+    valid0, valid1 = lam0 <= 0.5, lam1 > 0.5
+    best = np.where(valid0 & valid1, np.maximum(F0, F1), np.where(valid0, F0, np.where(valid1, F1, np.minimum(F0, F1))))
+    lam_sel = np.where(valid0 & valid1, np.where(F0 >= F1, lam0, lam1), np.where(valid0, lam0, np.where(valid1, lam1, np.where(F0 <= F1, lam0, lam1))))
+    return best, lam_sel

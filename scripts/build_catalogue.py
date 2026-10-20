@@ -19,7 +19,7 @@ def main():
     os.makedirs(out, exist_ok=True)
     keys = list(cat.cols)
     with open(os.path.join(out, "ub_catalogue.csv"), "w", newline="") as f:
-        wr = csv.writer(f)
+        wr = csv.writer(f, lineterminator="\n")
         wr.writerow(["name", "series", "plus", "xlsx_row", "index_C", "index_Cplus"] + keys)
         for i, n in enumerate(cat.names):
             wr.writerow([n, cat.series[i], int(cat.plus[i]), int(cat.rows[i]), rank_c.get(n, ""), rank_cp[n]] + [repr(float(cat.cols[k][i])) for k in keys])

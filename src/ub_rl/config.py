@@ -4,7 +4,7 @@ Defaults are the working assumptions of the spec. They are not approvals."""
 from dataclasses import dataclass, asdict
 
 E_STEEL = 210_000.0  # N/mm2
-G_STEEL = 81_000.0  # N/mm2 (shear modulus, EN 1993-1-1 3.2.6)
+G_STEEL = E_STEEL / (2 * (1 + 0.3))  # N/mm2 = 80,769 (EN 1993-1-1 3.2.6: G = E / (2 (1 + nu)), nu = 0.3); matches the Blue Book Mb,Rd table
 G_ACC = 9.80665  # m/s2, mass per metre (kg/m) -> weight per metre (kN/m)
 PHI_REF = 27.0 / 56.7675  # variable share of the factored superimposed load (spec section 3)
 
@@ -25,6 +25,9 @@ class CheckerConfig:
     support: str = "fork"
     stiff_bearing_ss: float = 100.0  # mm
     bearing_c: float = 0.0  # mm, distance from the end of the stiff bearing to the end of the section
+    # Two valid solutions for m2 (SCI AD 378): "higher" takes the higher resistance (as the Blue Book tables, default);
+    # "sequential" uses m2 = 0 unless lambda_F > 0.5 (EN text order; lower resistance for 6 of the 91 sections)
+    bearing_rule: str = "higher"
     # Shear area / shear buckling factor eta (spec 15; UK NA to EN 1993-1-5 NA.2.4)
     shear_eta: float = 1.0
     # Class 4 treatment (spec 6 and 15): only "infeasible" is implemented
@@ -57,6 +60,8 @@ class CheckerConfig:
             raise ValueError("deflection_load must be 'variable' or 'total'")
         if self.class4_treatment != "infeasible":
             raise NotImplementedError("only class4_treatment='infeasible' is implemented (spec 6)")
+        if self.bearing_rule not in ("higher", "sequential"):
+            raise ValueError("bearing_rule must be 'higher' or 'sequential'")
         if self.support != "fork":
             raise NotImplementedError("only fork supports are modelled (spec 6)")
         if self.restraint_ratio < 0 or self.restraint_ratio > 1:

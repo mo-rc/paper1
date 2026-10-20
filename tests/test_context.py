@@ -53,8 +53,9 @@ def test_depth_cap_excludes_deep_sections_and_can_force_abstention(C):
     assert not np.any(capped["feasible"] & (C.cols["h"] > 500.0))
     assert np.all(capped["feasible"] <= capped["feasible_code"])
     i = K.lightest_feasible_context(replace(REF, depth_cap=500.0))
-    assert i is not None and C.cols["h"][i] <= 500.0
-    assert K.lightest_feasible_context(replace(REF, depth_cap=150.0)) is None
+    assert i >= 0 and C.cols["h"][i] <= 500.0
+    assert K.lightest_feasible_context(replace(REF, depth_cap=150.0)) == -1
+    assert K.lightest_feasible(15.0, 1e5) == -1 == K.lightest_feasible_context(Context(15.0, 6.0, 1e4, 1e4))
 
 
 def test_with_config_does_not_mutate_original(C):
@@ -63,10 +64,15 @@ def test_with_config_does_not_mutate_original(C):
     assert K.cfg.restraint_ratio == 0.0
 
 
-@pytest.mark.parametrize("kw", [dict(span=0), dict(width=-1), dict(dead=-1), dict(live=-1), dict(restraint_ratio=2),
+@pytest.mark.parametrize("kw", [dict(span=0), dict(width=-1), dict(dead=-1), dict(live=-1), dict(restraint_ratio=2), dict(restraint_ratio=0.75), dict(restraint_ratio=0.99),
                                 dict(deflection_rule="x"), dict(depth_cap=0)])
 def test_context_validation(kw):
     base = dict(span=9.0, width=6.0, dead=3.675, live=3.0)
     base.update(kw)
     with pytest.raises(ValueError):
         Context(**base)
+
+
+@pytest.mark.parametrize("r", [0.0, 0.1, 0.25, 1 / 3, 0.5, 1.0])
+def test_allowed_restraint_ratios(r):
+    Context(9.0, 6.0, 3.675, 3.0, restraint_ratio=r)

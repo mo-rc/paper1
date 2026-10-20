@@ -1,0 +1,57 @@
+section,quantity,value,unit,ss_mm,c_mm,Lcr_m,C1,kc,source,notes
+406x140x39,Vc_Rd,566,kN,,,,,,SCI AD 368,S355; Blue Book value quoted in the note
+406x140x39,Vb_Rd,488,kN,,,,,,SCI AD 368,"worked example with rounded intermediate values (lambda_w 0.85, chi_w 0.976); unrounded 489.8"
+762x267x134,Vc_Rd,1970,kN,,,,,,SCI AD 368,S355; Blue Book value quoted in the note
+762x267x134,Vb_Rd,1768,kN,,,,,,SCI AD 368,KNOWN OPEN ITEM: equals the cap (chi_w = 1); stated method gives about 1722; expect FAIL at 1 %
+457x191x74,Mc_Rd,,kNm,,,,,,,fill from Blue Book S355 bending table
+457x191x74,Vc_Rd,,kN,,,,,,,fill from Blue Book web bearing and buckling table
+457x191x74,F_Rd,,kN,100,0,,,,,"fill: ss = 100 mm, c = 0"
+457x191x74,Mb_Rd,,kNm,,,3,1.0,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+457x191x74,Mb_Rd,,kNm,,,6,1.0,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+457x191x74,Mb_Rd,,kNm,,,9,1.0,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+457x191x74,Mb_Rd,,kNm,,,3,1.13,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+457x191x74,Mb_Rd,,kNm,,,6,1.13,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+457x191x74,Mb_Rd,,kNm,,,9,1.13,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+406x140x39,Mc_Rd,,kNm,,,,,,,fill from Blue Book S355 bending table
+406x140x39,F_Rd,,kN,100,0,,,,,"fill: ss = 100 mm, c = 0"
+406x140x39,Mb_Rd,,kNm,,,3,1.0,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+406x140x39,Mb_Rd,,kNm,,,6,1.0,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+406x140x39,Mb_Rd,,kNm,,,9,1.0,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+406x140x39,Mb_Rd,,kNm,,,3,1.13,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+406x140x39,Mb_Rd,,kNm,,,6,1.13,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+406x140x39,Mb_Rd,,kNm,,,9,1.13,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+762x267x134,Mc_Rd,,kNm,,,,,,,fill from Blue Book S355 bending table
+762x267x134,F_Rd,,kN,100,0,,,,,"fill: ss = 100 mm, c = 0"
+762x267x134,Mb_Rd,,kNm,,,3,1.0,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+762x267x134,Mb_Rd,,kNm,,,6,1.0,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+762x267x134,Mb_Rd,,kNm,,,9,1.0,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+762x267x134,Mb_Rd,,kNm,,,3,1.13,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+762x267x134,Mb_Rd,,kNm,,,6,1.13,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+762x267x134,Mb_Rd,,kNm,,,9,1.13,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+127x76x13,Mc_Rd,,kNm,,,,,,,fill from Blue Book S355 bending table
+127x76x13,Vc_Rd,,kN,,,,,,,fill from Blue Book web bearing and buckling table
+127x76x13,F_Rd,,kN,100,0,,,,,"fill: ss = 100 mm, c = 0"
+127x76x13,Mb_Rd,,kNm,,,3,1.0,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+127x76x13,Mb_Rd,,kNm,,,6,1.0,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+127x76x13,Mb_Rd,,kNm,,,9,1.0,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+127x76x13,Mb_Rd,,kNm,,,3,1.13,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+127x76x13,Mb_Rd,,kNm,,,6,1.13,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+127x76x13,Mb_Rd,,kNm,,,9,1.13,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+1016x305x438,Mc_Rd,,kNm,,,,,,,fill from Blue Book S355 bending table
+1016x305x438,Vc_Rd,,kN,,,,,,,fill from Blue Book web bearing and buckling table
+1016x305x438,F_Rd,,kN,100,0,,,,,"fill: ss = 100 mm, c = 0"
+1016x305x438,Mb_Rd,,kNm,,,3,1.0,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+1016x305x438,Mb_Rd,,kNm,,,6,1.0,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+1016x305x438,Mb_Rd,,kNm,,,9,1.0,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+1016x305x438,Mb_Rd,,kNm,,,3,1.13,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+1016x305x438,Mb_Rd,,kNm,,,6,1.13,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+1016x305x438,Mb_Rd,,kNm,,,9,1.13,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+356x171x45,Mc_Rd,,kNm,,,,,,,fill from Blue Book S355 bending table
+356x171x45,Vc_Rd,,kN,,,,,,,fill from Blue Book web bearing and buckling table
+356x171x45,F_Rd,,kN,100,0,,,,,"fill: ss = 100 mm, c = 0"
+356x171x45,Mb_Rd,,kNm,,,3,1.0,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+356x171x45,Mb_Rd,,kNm,,,6,1.0,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+356x171x45,Mb_Rd,,kNm,,,9,1.0,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+356x171x45,Mb_Rd,,kNm,,,3,1.13,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+356x171x45,Mb_Rd,,kNm,,,6,1.13,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match
+356x171x45,Mb_Rd,,kNm,,,9,1.13,,,fill from Blue Book buckling resistance moment table; state C1 and kc of the table; moment diagram and load position must match

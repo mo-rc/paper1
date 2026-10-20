@@ -10,7 +10,7 @@ import pytest
 from ub_rl.checker import Checker
 from ub_rl.config import CheckerConfig
 
-E, G = 210000.0, 81000.0
+E, G = 210000.0, 210000.0 / (2 * 1.3)
 
 
 def mb_scalar(name_idx, K, C, L_m, w_ed_total, rho, top_flange, udl_factors_for_segments=False):
@@ -34,7 +34,7 @@ def mb_scalar(name_idx, K, C, L_m, w_ed_total, rho, top_flange, udl_factors_for_
     if lam <= 0.4 or MEd / mcr <= 0.16:
         chi = 1.0
     else:
-        alpha = 0.34 if h / b <= 2.0 else 0.49
+        alpha = 0.34 if h / b <= 2.0 else (0.49 if h / b <= 3.1 else 0.76)
         phi = 0.5 * (1 + alpha * (lam - 0.4) + 0.75 * lam * lam)
         chi = 1.0 / (phi + math.sqrt(phi * phi - 0.75 * lam * lam))
         chi = min(chi, 1.0, 1.0 / (lam * lam))
