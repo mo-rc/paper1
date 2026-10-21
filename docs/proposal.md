@@ -49,25 +49,25 @@ The catalogue study (Stage 1) is the controlled testbed with a known exact optim
 | Reference case | 9 m span, 6 m tributary width, 3.675 kN/m² dead, 3.0 kN/m² live, factored 56.77 kN/m; expected lightest UB 457×191×74 |
 | Objective | Minimum mass among sections that pass every check |
 
-**Seven context parameters** (the policy must generalize across them): span, tributary width, dead load, live load, lateral restraint spacing (Lcr/L), deflection rule, depth limit.
+**Seven context parameters** (the policy must generalize across them): span, tributary width, dead load, live load, lateral restraint spacing (Lcr/L equal to 0, up to 0.5, or 1), deflection rule (three rules), depth limit (none, 500, 600 or 700 mm).
 
 ## 6. Method
 
 **Verification engine.** A tested, vectorized Eurocode 3 checker (in the repository), extended with LTB, the seven-parameter contexts, and a welded-section version for Stage 2. It is verified by a separate implementation, hand calculations, and the Blue Book resistance tables before any RL training.
 
-**Stage 1: catalogue selection.** Discrete choice among 91 sections. Formulations: direct choice, and step-by-step refinement of a trial section using the utilisation of each check. Algorithms are compared in a tournament under equal tuning effort: DQN, Double DQN, Dueling Double DQN, discrete PPO, discrete SAC, policy gradient.
+**Stage 1: catalogue selection.** Discrete choice among 91 sections. Formulations: direct choice, and step-by-step refinement of a trial section using the utilisation of each check. Algorithms are compared in a tournament under equal tuning effort: DQN, Double DQN, Dueling Double DQN, discrete PPO, discrete SAC, policy gradient, and a GFlowNet for diversity.
 
 **Stage 2: custom welded sections.** Continuous or increment-based design of h, b, tw, tf. Algorithms: SAC, TD3, DDPG, PPO, branching dueling Q-networks, and hybrids where the policy warm-starts an optimizer.
 
 **Rewards.** Four families are compared on validation data: reference-relative, potential-based shaping, constrained (Lagrangian), and call-penalized. In all of them a safe design always scores higher than an unsafe one.
 
-**Baselines (same checker, same cost accounting).** Exhaustive enumeration (exact optimum), heuristic iteration (conventional manual design), random search, genetic algorithm, differential evolution, a supervised classifier, and for Stage 2 also SLSQP and CMA-ES.
+**Baselines (same checker, same cost accounting).** Exhaustive enumeration (exact optimum), ordered scan, heuristic iteration (conventional manual design), random search, genetic algorithm, differential evolution, a supervised classifier, and for Stage 2 also SLSQP and CMA-ES.
 
 **Fair comparison.** Separate training, validation and test contexts fixed before training; held-out interior block, unseen restraint values and extrapolation sets; ten random seeds; Holm-corrected exact tests with practical margins, and non-inferiority tests for custom sections; cost counted in checker calls, training and tuning included. All results in the paper come from saved runs.
 
 ## 7. What counts as success
 
-RL is claimed to win only if it meets one of these, fixed in advance:
+RL is claimed to win only if it meets one of these, fixed in advance (the exact tests and thresholds are in `docs/spec.md`, Amendment A1):
 
 - **Custom sections (non-inferiority):** mass no more than 2 percentage points above the best per-problem optimizer, tested with a non-inferiority test; safe in at least 99 % of tests; and at least 10× cheaper per design.
 - **Learning from feedback:** beats a supervised classifier given the same total checker-call budget.
@@ -103,4 +103,4 @@ If none is met, the paper's contribution is the verified environment and the ben
 
 **Out of scope:** connections, composite action, fire, vibration, frames, topology optimization, cost and life-cycle analysis.
 
-**Assumptions to confirm:** 1.35/1.5 load factors; self-weight included in the checks; deflection limits L/360 (variable load, primary) with L/200 and L/250 as variants; bearing length 100 mm; LTB with load at the shear centre (top-flange loading as a variant); Class 4 sections treated as unsafe in Stage 1; fy reduced by plate thickness (355, 345, 335, 325 N/mm²).
+**Assumptions to confirm:** 1.35/1.5 load factors; self-weight included in the checks; deflection limits L/360 (variable load, primary) with L/200 and L/250 as variants; bearing length 100 mm; LTB with load at the shear centre (loads on the top flange are not validated and not used); Class 4 sections treated as unsafe in Stage 1; fy reduced by plate thickness (355, 345, 335, 325 N/mm²).

@@ -1,6 +1,6 @@
 # Specification (pre-registration)
 
-Version 1.2. Repository: https://github.com/mo-rc/paper1. Frozen before any run. Changes are dated amendments at the end of this file, made before the affected run.
+Version 1.2 with Amendment A1 (end of file). Repository: https://github.com/mo-rc/paper1. Frozen before any run. Changes are dated amendments at the end of this file, made before the affected run.
 
 ## 1. Scope
 
@@ -224,20 +224,36 @@ Governing narrative: `docs/proposal.md` (one journal paper). Status: **proposed,
 | "PPO, SAC, TD3 and DDPG are not used" (section 9) | Replaced: Stage 1 runs a tournament (DQN, Double DQN, Dueling Double DQN, discrete PPO, discrete SAC, policy gradient, GFlowNet for diversity); Stage 2 uses SAC, TD3, DDPG, PPO, branching dueling Q-networks and hybrids |
 | Scope: fully restrained, UDL only, fixed dead/live share, fixed bearing length (section 13) | Fully restrained and fixed dead/live share no longer hold (contexts below). UDL only and fixed bearing length (100 mm) still hold |
 | Context = (span, factored UDL), dead/live share fixed (sections 3 and 8) | Context = seven parameters, `ub_rl.context.Context`: span, tributary width, dead load, live load, restraint ratio, deflection rule, depth cap. Ranges and splits fixed at Gate 3 after the feasibility audit; the v1.2 box remains the full-restraint sub-study |
+| LTB: continuous restraint, chi_LT = 1 (section 6) | LTB is checked per context through the restraint ratio (change 1); ratio 0 reproduces this row |
+| Configurations F0-R1, F1-R1, F1-R2, F2-R3; algorithms REINFORCE, Dueling Double DQN, GFlowNet; 40 runs (section 9) | Replaced by the tournament matrix of change 4. These four configurations remain the first entries of that matrix |
+| Sensitivity rules span/200 and total load span/250 evaluated without retraining RL (section 9) | The deflection rule is a context parameter, so RL is trained across `var360`, `var200` and `tot250` (change 3). The sensitivity paragraph still applies to C+ (107 rows) |
+| Extra context parameters such as a depth cap are not in the frozen study (section 15) | The depth cap is a context parameter (floor-depth limit; values none, 500, 600, 700 mm, to be confirmed at Gate 3) |
 | Self-set target of about one month (section 14) | About 28 weeks |
 
 **Changes**
 
-1. **LTB check** (`restraint_ratio` = Lcr / L in `CheckerConfig`). 0 means continuous restraint and reproduces v1.2 exactly. EN 1993-1-1 6.3.2.3, rolled I sections; Mcr per NCCI SN003; load at the shear centre by default, top-flange loading (zg = +h/2) as a sensitivity; curve b for h/b <= 2, curve c otherwise; lambda_LT,0 = 0.4, beta = 0.75. **Moment factors:** C1 = 1.127, C2 = 0.454, kc = 0.94 (UDL) only when restraints are at the supports (ratio 1). For 0 < ratio < 1 the conservative uniform-moment values C1 = 1, kc = 1 are used at the maximum design moment (C2 kept for top-flange loading); per-segment moment diagrams are a Gate 2 sensitivity, not part of the primary study.
+1. **LTB check** (`restraint_ratio` = Lcr / L in `CheckerConfig`). 0 means continuous restraint and reproduces v1.2 exactly. EN 1993-1-1 6.3.2.3, rolled I sections; Mcr per NCCI SN003; load at the shear centre by default, top-flange loading (zg = +h/2) as a sensitivity; curve b for h/b <= 2, curve c for 2 < h/b <= 3.1, curve d above 3.1 (alpha 0.34, 0.49, 0.76; UK NA, confirmed by the Blue Book comparison); lambda_LT,0 = 0.4, beta = 0.75; shear modulus G = E / (2 (1 + 0.3)) = 80,769 N/mm2 (matches the Blue Book Mb,Rd table). **Moment factors:** C1 = 1.127, C2 = 0.454, kc = 0.94 (UDL) only when restraints are at the supports (ratio 1). For 0 < ratio < 1 the conservative uniform-moment values C1 = 1, kc = 1 are used at the maximum design moment (C2 kept for top-flange loading); per-segment moment diagrams are a Gate 2 sensitivity, not part of the primary study. Loads on the top flange are not validated and are not used in any frozen result.
 2. **Seven-parameter contexts** implemented as `Context` with `Checker.evaluate_context` and `lightest_feasible_context`. The depth cap is a design requirement, not a code check: contexts with no feasible section are abstention cases and are not removed (`lightest_feasible` and `lightest_feasible_context` both return -1). **Restraint ratios in contexts are limited to 0, values in (0, 0.5], and 1**; the LTB model is not monotone in (0.5, 1) (see verification record), so those values are rejected.
 3. **Deflection rules** per context: `var360` (variable load, L/360, primary), `var200` (variable, L/200), `tot250` (total characteristic, L/250).
-4. **Algorithms:** pre-registered tournament under equal tuning effort (12 configurations each, selection on V only).
+4. **Algorithms (Stage 1 tournament matrix):** each algorithm is run on the formulations it supports, under equal tuning effort (12 configurations each, selection on V only), seeds 0 to 9, 200,000 checker calls per run, as in section 9.
+   - F0 (direct choice, R1): REINFORCE with a learned baseline; discrete PPO.
+   - F1 (refinement, R1): DQN; Double DQN; Dueling Double DQN with prioritised replay and n-step returns; discrete PPO; discrete SAC.
+   - F2 (constructive, R3): conditional GFlowNet (diversity).
+   - Reward variants R2, R-C and R-D are run for the best F1 algorithm selected on V.
+   - About 110 runs in total (8 algorithm-formulation entries and 3 reward variants, 10 seeds each). The primary comparisons P1 to P4 of section 11 use the best configuration selected on V.
 5. **Reward families** (R1 to R3 as in section 9; R3 is for F2 only):
    - **R-A = R1**, reference-relative terminal reward. **R-B = R2**, potential-based shaping.
    - **R-C Lagrangian (new):** the environment reward is R1, unchanged. The training loss adds lambda * c with cost c = max(0, max utilisation - 1) of the accepted design and a multiplier updated by dual ascent (lambda <- max(0, lambda + eta * (mean c - 0))). The ordering rule holds for the environment reward; feasibility is judged on verified output, never on the penalised objective.
    - **R-D call-penalized (new):** R1 with step cost kappa per checker call, with kappa * N_max <= 0.5 (N_max = maximum calls per episode), so the margin of 1 between feasible and infeasible returns is preserved, as for the 0.001 step cost of R1. For the expensive-check regime the cost is reported in calls and in assumed seconds per call, not folded into reward values.
    - The ordering "every feasible return exceeds every infeasible return" is asserted per validation context for every family; constants are frozen at Gate 4.
-6. **Stage 2** (welded symmetric I-sections) carries the main result; Stage 1 is the controlled testbed; both are reported in one paper. Success criteria (proposal section 7) use a non-inferiority test for custom sections: the one-sided upper bound of the median mass gap to the best per-problem optimizer must not exceed 2 percentage points, with Holm correction over the pre-registered comparisons.
+6. **Stage 2** (welded symmetric I-sections) carries the main result; Stage 1 is the controlled testbed; both are reported in one paper. Success criteria for custom sections (proposal section 7), fixed here before any Stage 2 run:
+   - S3 safety: raw top-1 verified feasibility >= 0.99 in every seed.
+   - S4 quality (non-inferiority): the one-sided upper 95 % bound of the median mass gap to the best per-problem optimizer is at most 2 percentage points.
+   - S5 cost: at least 10 times fewer checker calls per verified design than the best per-problem optimizer, training and tuning counted through N* as in section 10.
+   - S6 hybrid: warm-starting an optimizer from the policy reaches the same final mass with at least 30 % fewer optimizer evaluations than a cold start.
+   - Stage 2 confirmatory family (at most four, Holm correction within Stage 2): P5 best RL vs best optimizer, mass gap (non-inferiority); P6 best RL vs best optimizer, calls per verified design; P7 best RL vs supervised policy trained on optimizer labels at matched calls, mass gap; P8 hybrid vs cold-start optimizer, evaluations.
+   - Proposal section 7 maps to the specification as follows: "learning from feedback" is P2 (Stage 1); "expensive verification" is P1 with N* reported at 1 ms and 1 s per call (section 10); "custom sections" is S3 to S5 and P5 to P7; "hybrid" is S6 and P8.
+   - **Amendment A3 (patch P14) is required before any Stage 2 run** and must fix: the design variables and bounds, class and h/b limits, fabrication increments, the welded LTB parameters (UK NA: lambda_LT,0 = 0.2, beta = 1.0, curve c for h/b <= 2 and curve d for 2 < h/b <= 3.1, and how h/b > 3.1 is handled), the Stage 2 splits and baselines, and the budgets. A3 may add detail but may not weaken S3 to S6 or P5 to P8. Amendment A2 (patch P6) fixes the Stage 1 seven-parameter ranges and splits.
 
 7. **Web bearing, two valid solutions:** `CheckerConfig.bearing_rule` = `higher` (default; SCI AD 378 and the Blue Book tables) or `sequential` (EN text order, lower resistance for 6 sections). The default is unchanged. `sequential` is a pre-registered sensitivity.
 8. **Gate 2 artefacts added:** a second implementation of the non-LTB checks, public SCI benchmarks, generated verification cases, and a Blue Book comparison script (see the verification record). They do not change any assumption.
