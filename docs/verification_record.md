@@ -1,6 +1,6 @@
 # Verification record (checker)
 
-Status of clause details used by `src/ub_rl/checker.py`. "Confirmed" means read in a public SCI source named below. The last section (Gate 2, Blue Book comparison) is a result; hand calculations and an independent second implementation of the non-LTB checks are still open.
+Status of clause details used by `src/ub_rl/checker.py`. "Confirmed" means read in a public SCI source named below. The Gate 2 sections below are results; the engineer's sign-off of the hand-check cases is still open (`docs/review_request.md`).
 
 ## Confirmed in public sources
 
@@ -19,7 +19,7 @@ Status of clause details used by `src/ub_rl/checker.py`. "Confirmed" means read 
 
 ## Discrepancy
 
-- SCI AD 368 gives Vb,Rd = 1768 kN for 762x267x134. That equals eta fy hw tw / sqrt(3) with no chi_w reduction. The method stated in the same note gives 1722 kN (chi_w = 0.974), which the checker uses. For 406x140x39 the note's 488 kN is reproduced within 0.4% (the note rounds eps to 0.81). To be resolved at Gate 2 against the Blue Book table.
+- SCI AD 368 gives Vb,Rd = 1768 kN for 762x267x134. That equals eta fy hw tw / sqrt(3) with no chi_w reduction. The method stated in the same note gives 1722 kN (chi_w = 0.974), which the checker uses. For 406x140x39 the note's 488 kN is reproduced within 0.4% (the note rounds eps to 0.81). Closed in the Gate 2 section below (no design impact).
 
 ## Not confirmed (formulas taken from secondary sources or by reasoning)
 
@@ -116,6 +116,8 @@ Status: **partly done, not accepted.** The items below were done without the Blu
 
 1. **Buckling curve.** The checker stopped at curve c (alpha 0.49) for h/b > 2. The table requires curve d (alpha 0.76) for h/b > 3.1, the UK NA selection: b for h/b <= 2, c for 2 < h/b <= 3.1, d above. It applies to 16 sections (10 in C: the 1016x305 series; 6 "+" rows: 533x165x66/75/85 and 610x178x82/92/100). With curve c the checker overstated Mb,Rd by up to 15.8 % (unconservative) for these.
 2. **Shear modulus.** G = 81,000 changed to E / (2 (1 + nu)) = 80,769 N/mm2. With 81,000, 25 of 12,733 Mb,Rd values lay outside the interval (at most about 0.2 %).
+
+**UK NA curve table, second source.** The curve selection (rolled I: b for h/b <= 2, c for 2 < h/b <= 3.1, d above 3.1; welded: c for h/b <= 2, d for 2 < h/b <= 3.1, nothing above 3.1; lambda_LT,0 = 0.4 and beta = 0.75 rolled, 0.2 and 1.0 welded) is also given by Bentley STAAD.Pro Help, clause 6.3.2.3(1), which reproduces UK NA NA.2.17. The NA text itself has not been read.
 
 **Convention confirmed.** The Blue Book Mb,Rd uses kc = 1 / sqrt(C1) with the load at the shear centre; it is reproduced for C1 = 1.00 to 2.50 and Lcr = 1 to 14 m (17 lengths x 7 values of C1 x 107 sections). The checker's intermediate-restraint rule (C1 = 1, kc = 1) is exactly the C1 = 1.00 row of the table; the full-span UDL rule (C1 = 1.127, kc = 0.94) lies between the 1.00 and 1.13 rows. Top-flange loading (zg = +h/2) is not covered by the table and remains unvalidated.
 

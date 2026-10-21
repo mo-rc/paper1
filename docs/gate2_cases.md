@@ -224,24 +224,24 @@ Hand-checked by: ____________   date: __________   result: __________
 
 ## G2-10: LTB governs, restraint 1/2 span
 
-Section 610x229x140 (139.9 kg/m): h = 617.2, b = 230.2, tw = 13.1, tf = 22.1, r = 12.7 mm; hw = h - 2tf = 573.0; class 1; fy = 345 N/mm2 (max(tf, tw) = 22.1).
+Section 305x102x33 (32.8 kg/m): h = 312.7, b = 102.4, tw = 6.6, tf = 10.8, r = 7.6 mm; hw = h - 2tf = 291.1; class 1; fy = 355 N/mm2 (max(tf, tw) = 10.8).
 
-Context: L = 15.0 m, superimposed factored UDL w = 20.0 kN/m, variable share 0.4756; restraint ratio 0.500; deflection variable L/360.
+Context: L = 3.0 m, superimposed factored UDL w = 119.86691247694505 kN/m, variable share 0.4756; restraint ratio 0.500; deflection variable L/360.
 
-Actions: self-weight g = 1.3720 kN/m; w_Ed = w + 1.35 g = 21.8521 kN/m; M_Ed = 614.59 kNm; V_Ed = 163.89 kN.
+Actions: self-weight g = 0.3217 kN/m; w_Ed = w + 1.35 g = 120.3012 kN/m; M_Ed = 135.34 kNm; V_Ed = 180.45 kN.
 
-Resistances: M_c,Rd = 1428.30 kNm; V_pl,Rd = 1688.30 kN; V_b,Rd = inf kN (inf = shear buckling not applicable); F_Rd (ss = 100 mm, c = 0) = 754.66 kN.
+Resistances: M_c,Rd = 170.75 kNm; V_pl,Rd = 451.65 kN; V_b,Rd = inf kN (inf = shear buckling not applicable); F_Rd (ss = 100 mm, c = 0) = 265.87 kN.
 
-LTB: L_cr = 7.50 m; M_cr = 730.9 kNm; chi_LT = 0.4303; M_b,Rd = 614.6 kNm; u_LTB = 1.0000.
+LTB: L_cr = 1.50 m; M_cr = 300.6 kNm; chi_LT = 0.7926; M_b,Rd = 135.3 kNm; u_LTB = 1.0000.
 
 | Check | u (checker) | u (reference) |
 |---|---|---|
-| bending | 0.4303 | 0.4303 |
-| shear | 0.0971 | 0.0971 |
+| bending | 0.7926 | 0.7926 |
+| shear | 0.3995 | 0.3995 |
 | shear_buckling | 0.0000 | 0.0000 |
-| bending_shear | 0.4303 | 0.4303 |
-| web_bearing | 0.2172 | 0.2172 |
-| deflection | 0.4266 | 0.4266 |
+| bending_shear | 0.7926 | 0.7926 |
+| web_bearing | 0.6787 | 0.6787 |
+| deflection | 0.3524 | 0.3524 |
 | ltb | 1.0000 | see LTB line |
 
 Governing: **ltb**, max utilisation 1.0000, feasible: True.
@@ -250,27 +250,27 @@ Hand-checked by: ____________   date: __________   result: __________
 
 ## G2-11: LTB governs, unrestrained
 
-Section 254x146x31 (31.1 kg/m): h = 251.4, b = 146.1, tw = 6.0, tf = 8.6, r = 7.6 mm; hw = h - 2tf = 234.2; class 1; fy = 355 N/mm2 (max(tf, tw) = 8.6).
+Section 1016x305x415 (415.0 kg/m): h = 1020.0, b = 304.0, tw = 26.0, tf = 46.0, r = 30.0 mm; hw = h - 2tf = 928.0; class 1; fy = 335 N/mm2 (max(tf, tw) = 46.0).
 
-Context: L = 4.5 m, superimposed factored UDL w = 30.479722796037148 kN/m, variable share 0.4756; restraint ratio 1.000; deflection variable L/360.
+Context: L = 12.0 m, superimposed factored UDL w = 133.18170585941243 kN/m, variable share 0.4756; restraint ratio 1.000; deflection variable L/360.
 
-Actions: self-weight g = 0.3050 kN/m; w_Ed = w + 1.35 g = 30.8915 kN/m; M_Ed = 78.19 kNm; V_Ed = 69.51 kN.
+Actions: self-weight g = 4.0698 kN/m; w_Ed = w + 1.35 g = 138.6759 kN/m; M_Ed = 2496.17 kNm; V_Ed = 832.06 kN.
 
-Resistances: M_c,Rd = 139.51 kNm; V_pl,Rd = 336.01 kN; V_b,Rd = inf kN (inf = shear buckling not applicable); F_Rd (ss = 100 mm, c = 0) = 255.22 kN.
+Resistances: M_c,Rd = 6566.00 kNm; V_pl,Rd = 5587.30 kN; V_b,Rd = inf kN (inf = shear buckling not applicable); F_Rd (ss = 100 mm, c = 0) = 2483.47 kN.
 
-LTB: L_cr = 4.50 m; M_cr = 89.2 kNm; chi_LT = 0.5605; M_b,Rd = 78.2 kNm; u_LTB = 1.0000.
+LTB: L_cr = 12.00 m; M_cr = 3401.3 kNm; chi_LT = 0.3802; M_b,Rd = 2496.6 kNm; u_LTB = 0.9998.
 
 | Check | u (checker) | u (reference) |
 |---|---|---|
-| bending | 0.5605 | 0.5605 |
-| shear | 0.2069 | 0.2069 |
+| bending | 0.3802 | 0.3802 |
+| shear | 0.1489 | 0.1489 |
 | shear_buckling | 0.0000 | 0.0000 |
-| bending_shear | 0.5605 | 0.5605 |
-| web_bearing | 0.2723 | 0.2723 |
-| deflection | 0.4458 | 0.4458 |
-| ltb | 1.0000 | see LTB line |
+| bending_shear | 0.3802 | 0.3802 |
+| web_bearing | 0.3350 | 0.3350 |
+| deflection | 0.1910 | 0.1910 |
+| ltb | 0.9998 | see LTB line |
 
-Governing: **ltb**, max utilisation 1.0000, feasible: True.
+Governing: **ltb**, max utilisation 0.9998, feasible: True.
 
 Hand-checked by: ____________   date: __________   result: __________
 

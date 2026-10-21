@@ -26,6 +26,8 @@ C = cat.mass_ordered(False)
 names = C.names
 LS = [0.8, 1.0, 1.5, 2.0, 3.0, 4.5, 6.0, 7.5, 9.0, 10.5, 12.0, 13.5, 15.0]
 WS = [float(x) for x in np.geomspace(20, 10000, 60)]
+# Blue Book Mb,Rd table lengths (m): LTB cases use only these unrestrained lengths so an engineer can read Mb,Rd from the table
+TABLE_LCR = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0] + [float(x) for x in range(5, 15)]
 cols = list(C.cols["m"])
 
 
@@ -41,6 +43,8 @@ def _search(target, rho, mode, exclude, only, lo, hi):
     best = None
     K = Checker(C, replace(CheckerConfig(), restraint_ratio=rho, deflection_load=mode[0], deflection_ratio=mode[1]))
     for L in LS:
+        if target == "ltb" and rho > 0 and not any(abs(rho * L - t) < 1e-9 for t in TABLE_LCR):
+            continue
         for w in WS:
             e = K.evaluate(L, float(w))
             for i in range(len(names)):
