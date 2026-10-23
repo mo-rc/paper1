@@ -135,3 +135,14 @@ Status: **partly done, not accepted.** The items below were done without the Blu
 - *Per-segment moment diagrams.* Not implemented. The uniform-moment factors used for intermediate restraint are conservative (they equal the C1 = 1.00 row of the Blue Book table); the loss in quality is a documented limitation.
 
 **Not done and not doable by the checker's authors.** The sign-off of the 14 generated hand-check cases (`docs/gate2_cases.md`) by an engineer, and review by someone who did not write the checker. Gate 2 is therefore evidence-complete but not accepted.
+
+## Gate 2: hand check by calculator (Muhammad Shifa, 23 October 2026)
+
+**What was done.** For the 14 cases of `docs/gate2_cases.md`, Muhammad Shifa recomputed the results with a calculator and entered them in the hand-check workbook (`scripts/make_hand_check_workbook.py`). Inputs: the case sheet and the Blue Book properties table; Blue Book values for Mc,Rd, Vc,Rd, FRd and Mb,Rd; the formulas of `docs/hand_calc_G2-01.md`. The record is `data/gate2/handcheck_values.csv` (program value, entered value, difference).
+
+**Result.** All 234 cells entered (the Section class cells of G2-04 and G2-08 were entered in a second upload). No entered value differs from the program by more than 0.5 % (largest 0.28 %, G2-12). 127 of the 201 non-integer entries equal the program value to nine digits, as expected when the same formulas and inputs are evaluated without intermediate rounding; the others differ by rounded Blue Book values and rounded intermediate steps (at most 0.28 %).
+
+**What it shows and what it does not.** It shows that the program's arithmetic reproduces the listed formulas on the 14 cases. It does not show that the formulas match EN 1993-1-1, EN 1993-1-5 and the UK National Annex, because the formulas listed are the program's own. That needs the supervising engineer's review (the 12 assumptions in `docs/review_request.md`), which is pending.
+
+**Gate 2 status.** Evidence complete; calculator hand check done; supervisor sign-off pending; not accepted.
+

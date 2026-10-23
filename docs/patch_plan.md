@@ -11,6 +11,7 @@ Every step of the project is one patch: one commit, its own tests, its own accep
 | D3 | Review fixes: restraint ratios limited to 0, (0, 0.5] and 1; one not-found convention (-1); sensitivity script | 101 tests |
 | D4 | Gate 2 evidence: second implementation of the non-LTB checks, public SCI benchmarks, generated verification cases, Blue Book comparison script and module, corrections found (LTB curve d for h/b > 3.1; shear modulus) | 120 tests, 7 skipped without the licensed Blue Book workbooks; all 107 sections agree with the Blue Book tables within rounding |
 | D5 | This plan and the engineering review request (`docs/review_request.md`) | none needed (documents) |
+| D6 | Hand check of the 14 Gate 2 cases by calculator (Muhammad Shifa): 234 values, none differing by more than 0.5 %; hand-check workbook and record | `tests/test_handcheck_record.py` |
 
 ## Planned patches
 
