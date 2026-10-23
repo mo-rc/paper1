@@ -2,7 +2,7 @@
 
 Reinforcement learning for safe, automated selection of standard UK Universal Beams.
 
-Specification: `docs/spec.md`.
+Specification: `docs/spec.md`. Engineering concepts, formulas and code names for readers new to structural engineering: `docs/engineering_concepts.md`.
 
 ## Checker
 
