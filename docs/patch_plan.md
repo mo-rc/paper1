@@ -12,12 +12,9 @@ Every step of the project is one patch: one commit, its own tests, its own accep
 | D4 | Gate 2 evidence: second implementation of the non-LTB checks, public SCI benchmarks, generated verification cases, Blue Book comparison script and module, corrections found (LTB curve d for h/b > 3.1; shear modulus) | 120 tests, 7 skipped without the licensed Blue Book workbooks; all 107 sections agree with the Blue Book tables within rounding |
 | D5 | This plan and the engineering review request (`docs/review_request.md`) | none needed (documents) |
 | D6 | Hand check of the 14 Gate 2 cases by calculator (Muhammad Shifa): 234 values, none differing by more than 0.5 %; hand-check workbook and record | `tests/test_handcheck_record.py` |
+| D7 | P5 Gate 2 sign-off: all 12 assumptions agreed and the form signed by the supervising engineer (23 October 2026); Gate 2 accepted | `docs/gate2_signoff.md`, `docs/review_request_signed.md` |
 
 ## Planned patches
-
-### Gate 2 close-out
-
-**P5 Gate 2 sign-off.** Record the engineer's check of the 8 required cases in `docs/gate2_cases.md` (G2-01, 02, 06, 07, 08, 09, 10, 11), the answers on each assumption, and the review notes (`docs/gate2_signoff.md`); fix whatever is found, with a dated amendment if an assumption changes. *Accepted when:* every required case is signed, every assumption has an answer, no open difference above rounding. *Needs a person:* the filled form from `docs/review_request.md`; this is the only step in the plan that no program can do.
 
 ### Gate 3: Stage 1 preparation
 

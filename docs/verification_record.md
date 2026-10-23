@@ -1,6 +1,6 @@
 # Verification record (checker)
 
-Status of clause details used by `src/ub_rl/checker.py`. "Confirmed" means read in a public SCI source named below. The Gate 2 sections below are results; the engineer's sign-off of the hand-check cases is still open (`docs/review_request.md`).
+Status of clause details used by `src/ub_rl/checker.py`. "Confirmed" means read in a public SCI source named below. The Gate 2 sections below are results; Gate 2 was accepted on 23 October 2026 (`docs/gate2_signoff.md`).
 
 ## Confirmed in public sources
 
@@ -70,7 +70,7 @@ Reference-case optima unchanged by the Gate 2 corrections below. (An earlier ver
 
 ## Gate 2 progress (2026-10-19)
 
-Status: **partly done, not accepted.** The items below were done without the Blue Book tables; the Blue Book comparison is in the next section.
+Status at 2026-10-19 (superseded; Gate 2 accepted 23 October 2026, see Gate 2 status below): **partly done, not accepted.** The items below were done without the Blue Book tables; the Blue Book comparison is in the next section.
 
 **Second implementation of the non-LTB checks** (`tests/reference_checks.py`, plain Python, written separately from the vectorised checker, following the clause text and the public SCI worked examples). `tests/test_reference_checks.py` compares every section for 10 contexts (spans 3 to 20 m, loads 40 to 800 kN/m) under three deflection rules: 10,920 comparisons of bending, shear, shear buckling, web bearing, deflection, bending-shear interaction, class and feasibility, agreement to 1e-9 (observed 3e-16). Where V > Vpl the shear check already fails and the interaction utilisation is defined differently (the checker caps rho at 1, the second implementation marks it infeasible); both are infeasible there. It shares the catalogue columns with the checker and was written by the same author team, so it checks arithmetic and reading of the clauses, not an engineer's independent judgement. The LTB second implementation is in `tests/test_ltb_reference.py`.
 
@@ -134,7 +134,7 @@ Status: **partly done, not accepted.** The items below were done without the Blu
 - *Top-flange loading.* Not validated (the Blue Book table is for load at the shear centre). It stays a configuration option, is not exposed in `Context`, and is not used in any primary or pre-registered result.
 - *Per-segment moment diagrams.* Not implemented. The uniform-moment factors used for intermediate restraint are conservative (they equal the C1 = 1.00 row of the Blue Book table); the loss in quality is a documented limitation.
 
-**Not done and not doable by the checker's authors.** The sign-off of the 14 generated hand-check cases (`docs/gate2_cases.md`) by an engineer, and review by someone who did not write the checker. Gate 2 is therefore evidence-complete but not accepted.
+**Review by someone who did not write the checker.** Done: the supervising engineer agreed the 12 assumptions and signed the form (`docs/gate2_signoff.md`).
 
 ## Gate 2: hand check by calculator (Muhammad Shifa, 23 October 2026)
 
@@ -142,7 +142,7 @@ Status: **partly done, not accepted.** The items below were done without the Blu
 
 **Result.** All 234 cells entered (the Section class cells of G2-04 and G2-08 were entered in a second upload). No entered value differs from the program by more than 0.5 % (largest 0.28 %, G2-12). 127 of the 201 non-integer entries equal the program value to nine digits, as expected when the same formulas and inputs are evaluated without intermediate rounding; the others differ by rounded Blue Book values and rounded intermediate steps (at most 0.28 %).
 
-**What it shows and what it does not.** It shows that the program's arithmetic reproduces the listed formulas on the 14 cases. It does not show that the formulas match EN 1993-1-1, EN 1993-1-5 and the UK National Annex, because the formulas listed are the program's own. That needs the supervising engineer's review (the 12 assumptions in `docs/review_request.md`), which is pending.
+**What it shows and what it does not.** It shows that the program's arithmetic reproduces the listed formulas on the 14 cases. It does not show that the formulas match EN 1993-1-1, EN 1993-1-5 and the UK National Annex, because the formulas listed are the program's own. The supervising engineer reviewed and agreed the 12 assumptions in `docs/review_request.md` (`docs/gate2_signoff.md`).
 
-**Gate 2 status.** Evidence complete; calculator hand check done; supervisor sign-off pending; not accepted.
+**Gate 2 status.** Accepted, 23 October 2026. All 12 assumptions agreed and the review form signed by the supervising engineer (Dr. Mudasir Hussain; `docs/gate2_signoff.md`); the 14 cases were recomputed by calculator by Muhammad Shifa (the supervising engineer did not recompute individual cases); resistances agree with the Blue Book for all 107 sections.
 
