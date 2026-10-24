@@ -1,0 +1,9 @@
+restraint_ratio,deflection_rule,depth_cap
+0.25,tot250,900
+0.25,var200,700
+0.5,tot250,none
+0.5,tot250,800
+0.5,var200,900
+0.5,var360,700
+1.0,tot250,none
+1.0,var360,800

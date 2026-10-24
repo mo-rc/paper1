@@ -146,3 +146,6 @@ Status at 2026-10-19 (superseded; Gate 2 accepted 23 October 2026, see Gate 2 st
 
 **Gate 2 status.** Accepted, 23 October 2026. All 12 assumptions agreed and the review form signed by the supervising engineer (Dr. Mudasir Hussain; `docs/gate2_signoff.md`); the 14 cases were recomputed by calculator by Muhammad Shifa (the supervising engineer did not recompute individual cases); resistances agree with the Blue Book for all 107 sections.
 
+## P6: context box audit (2026-10-23)
+
+Enumeration over C for all 34,524 context-file rows (one checker call each on C and on C+) by `scripts/context_audit.py`; tables `paper/tables/audit_*.csv`, summary `docs/context_audit.md`. The reference optima at restraint ratios 0, 0.25, 0.5 and 1 reproduce the optima recorded above (457x191x74, 533x210x82, 610x229x101, 686x254x140). The checker, config and context code are unchanged. Tests: `tests/test_splits.py`.

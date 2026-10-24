@@ -1,6 +1,6 @@
 # Specification (pre-registration)
 
-Version 1.2 with Amendment A1 (end of file). Repository: https://github.com/mo-rc/paper1. Frozen before any run. Changes are dated amendments at the end of this file, made before the affected run.
+Version 1.2 with Amendments A1 and A2 (end of file). Repository: https://github.com/mo-rc/paper1. Frozen before any run. Changes are dated amendments at the end of this file, made before the affected run.
 
 ## 1. Scope
 
@@ -259,3 +259,83 @@ Governing narrative: `docs/proposal.md` (one journal paper). Status: **proposed,
 8. **Gate 2 artefacts added:** a second implementation of the non-LTB checks, public SCI benchmarks, generated verification cases, and a Blue Book comparison script (see the verification record). They do not change any assumption.
 
 Unchanged: catalogue and parser, material rules, self-weight in the checker, call-count cost accounting, ten-seed exact tests with Holm correction, saturation rule, gates.
+
+### Amendment A2 (2026-10-23, before any run): Stage 1 seven-parameter ranges and splits (patch P6)
+
+Status: recorded before any RL run; Gate 3 acceptance covers it. Generator: `src/ub_rl/splits.py`; audit and files: `python scripts/context_audit.py` (`--check` regenerates and compares); results: `docs/context_audit.md` and `paper/tables/audit_*.csv`. No assumption of Gate 2 is changed. No physics, checker or objective is changed.
+
+**Disclosure.** The ranges were chosen after a checker-only look at feasibility (no model of any kind had been run). The same comparison is committed (`paper/tables/audit_cap_alternatives.csv`, every 4th training-pool row): the proposal's depth caps of 500 and 600 mm leave 71 to 100 % of the contexts without any feasible section (restraint 0: 95.0 % and 70.7 % abstention with cap 500 and 600 mm; restraint 1: 100 %). The cap values are therefore changed (superseded table). The audit rules R1 and R2 below are sanity gates fixed after that look; they are not claims.
+
+**Superseded statements**
+
+| Earlier statement | Status after A2 |
+|---|---|
+| Depth cap values none, 500, 600, 700 mm "to be confirmed at Gate 3" (A1, proposal section 5) | Confirmed as none, 700, 800, 900 mm. Caps 650 and 750 give the same abstention rates (UB depths cluster); 500 and 600 are near-empty (`audit_cap_alternatives.csv`) |
+| Contexts (L, w) with hole H, V = 500 (section 8) | Seven-parameter contexts, tables below. The hole is a block in (span, factored UDL w) with the other five parameters free. V = 1,000 (40 trained cells need more than 500) |
+| Training "sampled uniformly" (section 8) | Fixed training pool of 20,000 contexts (covers the 20,000 labels of supervised variant (iii)); learners draw from the pool. Online sampling is not used in frozen runs |
+| v1.2 box as the full-restraint sub-study (A1) | Kept as written in section 8: `v12_substudy.csv` holds V (500, seed 101), T1 (2,000, seed 202), T2 (500, seed 303) and E1 to E3 (500 each, seed 404) as contexts with width 6 m, dead and live scaled from the reference (variable share fixed), restraint 0, `var360`, no cap. Its training contexts are drawn online from the same box by the same generator. The seven-parameter files also carry the flag `slice_full_restraint` |
+
+**Table 1: sampling ranges** (uniform, rounded to span and width 0.01 m, dead and live 0.001 kN/m2; factored UDL w = (1.35 dead + 1.5 live) x width, rounded to 4 decimals; all tests use rounded values)
+
+| Parameter | Training box |
+|---|---|
+| span L | [9, 15] m |
+| tributary width | [4, 8] m |
+| dead load | [2.5, 5.0] kN/m2 |
+| live load | [2.0, 5.0] kN/m2 |
+| factored UDL w (rejection) | [56, 100] kN/m (the v1.2 range) |
+| restraint ratio | 0, 0.25, 0.5, 1 (equal probability) |
+| deflection rule | `var360`, `var200`, `tot250` (equal probability) |
+| depth cap | none, 700, 800, 900 mm (equal probability) |
+| hole H | L in [11.5, 12.5] m and w in [75, 85] kN/m (closed), excluded from training, V, T1, E-sets, T4 |
+
+The reference case (9 m, 6 m, 3.675, 3.0, restraint 0, `var360`, no cap; w = 56.7675 kN/m) is inside the box. `reference.csv` holds it at each of the four trained restraint ratios.
+
+**Table 2: splits.** Each test set differs from the training distribution in one stated way (E3 in two). Contexts are unique across all files. Within a file the sets share one random stream (`random.Random(seed)`, one `random()` per value, fixed order).
+
+| File, set | n | Seed | Definition |
+|---|---|---|---|
+| `train.csv` | 20,000 | 100 | box minus H, trained cells |
+| `val.csv` V | 1,000 | 101 | as training; checkpoint and hyperparameter selection only |
+| `test_t1.csv` T1 interpolation | 2,000 | 202 | as training |
+| `test_t2.csv` T2 held-out block | 500 | 303 | inside H, other five parameters as training |
+| `test_t3.csv` E1 | 500 | 404 | L in (15, 18] m, rest as training |
+| E2 | 500 | 404 | w in (100, 130] kN/m, drawn from the extended load box width [4, 10] m, dead [2.5, 6.5], live [2.0, 6.5] kN/m2; rest as training |
+| E3 | 500 | 404 | E1 and E2 together |
+| E4 | 500 | 404 | restraint ratio 1/3 (never trained; inside the allowed (0, 0.5]); span, load as training; rule and cap uniform over all 12 combinations |
+| `test_t4.csv` T4 unseen combinations | 1,000 | 505 | training box, but (restraint, rule, cap) in one of 8 held-out cells; every single value and every pair of values is seen in training |
+| `test_t5.csv` T5 lattice | 3,520 | none | every point of the lattice span {9, 10, ..., 15} m, width {4, 6, 8} m, dead {2.5, 3.75, 5.0}, live {2.0, 3.5, 5.0} kN/m2 with w in [56, 100] outside H, in each of the 40 trained cells. Ends and middle of each range (the supervisor's "lower, real, upper" idea as a deterministic test); no sampling |
+| `v12_substudy.csv` | 4,500 | 101, 202, 303, 404 | the v1.2 two-parameter sets, see the superseded table |
+| `reference.csv` | 4 | none | reference case, four restraint ratios |
+
+Test sets T1, T2, T3, T4 and T5 are reported separately and never pooled.
+
+Held-out cells (`data/splits/heldout_cells.csv`): 8 of the 48 cells, drawn with seed 506 (first draw accepted; conditions: the cell (0, `var360`, none) stays in training; every pair of values stays covered). They are listed in `docs/context_audit.md`.
+
+**Supervisor's suggestion of lower, real and upper values (decision).** Replacing the continuous ranges by a small grid (for example span 8, 9, 10) was considered and not adopted for training: a grid makes interpolation tests trivial and the held-out block, restraint value and combinations could not be defined as cleanly. Its purpose is kept as test T5, an exhaustive lattice that includes the range ends and middles; the lattice is a test only, so the training distribution stays continuous. The reference case lies between lattice points (dead load 3.675, not 3.75) and is reported separately.
+
+**Sensitivity catalogue.** The audit also enumerates every context on C+ (107 sections, spec section 4) and reports where C+ gives a lighter optimum or a feasible design where C abstains (`paper/tables/audit_cplus.csv`). The primary catalogue stays C (91 sections); the abstention list and the splits do not depend on C+.
+
+**Abstention.** A context with no feasible section (code checks, or all code-feasible sections deeper than the cap) is an abstention context. All are listed in `data/splits/abstention_contexts.csv` with the reason (`abstain_code` or `abstain_depth`); none is removed from any split file, now or later. Extrapolation sets contain many by construction; they are reported, not filtered.
+
+**Audit rules** (all must pass before the files are used; values in `paper/tables/audit_rules.csv`): R1 training-pool abstention share <= 0.25; R2 every one of the 40 trained cells has a feasible share >= 0.25; R3 the reference optima at restraint 0, 0.25, 0.5, 1 equal 457x191x74, 533x210x82, 610x229x101, 686x254x140 (`docs/verification_record.md`); R4 no duplicate context across files; R5 no context of train, V, T1, T2, E1 to E3 lies in a held-out cell. If a rule fails, the box is revised by a further dated amendment before any use.
+
+**File hashes (SHA-256).** Committed and checked by `tests/test_splits.py`. Test files are frozen at Gate 4 (section 12) with these hashes; they are not touched during tuning.
+
+| File | SHA-256 |
+|---|---|
+| `data/splits/train.csv` | `1c67b52a487912b17634d8ca0a4d1dffba9a453a05290c9e22ec56fb3e13db7d` |
+| `data/splits/val.csv` | `164c2ffcbf3647b1a86874c0ec26f3d528eb869a0407f76500c0bd43f73ce4e5` |
+| `data/splits/test_t1.csv` | `ad9e0bcd1064c914053239d22b373cbb95361c969b3791df84d78eabf84c2955` |
+| `data/splits/test_t2.csv` | `e5b31436673e5a36cb5ba2ccfba5c41fffbec07801076c6ae9b7ab1943341767` |
+| `data/splits/test_t3.csv` | `c718ee9517eca0901febaf8e1789bbd376b6f1ffd67c0cf1ed03235591319638` |
+| `data/splits/test_t4.csv` | `d7a8fd7c3a558b5ef2043ed0d85d111f77a133500afa7c26d07c330f1a33f199` |
+| `data/splits/test_t5.csv` | `7369f283a709e9681e95ed843aced01c9c91801dde4a51a2fea4181b018cef3c` |
+| `data/splits/v12_substudy.csv` | `8ffda9a0de01c8a58634b9bee0057d7bddf080c264662e28fa6207f77a97bf01` |
+| `data/splits/reference.csv` | `633e2f16202fd2b2b9aa0e2207e54cdbf5d1fe5033154237216494bc2ec4510c` |
+| `data/splits/heldout_cells.csv` | `693ff64c65a4a8e043a46fef3e07650edc2dff21d5f17a4c06b639a39629c72e` |
+| `data/splits/abstention_contexts.csv` | `3aae9b828dd6e98b47b583d7009d7322f01ff4c44a38032d1353beb12759df54` |
+
+**Result files.** `results/audit/labels_<file>.csv` (not committed) hold the enumeration optimum per context; each has `labels_<file>_meta.json` with the commit, the SHA-256 of the environment file (`src/ub_rl/checker.py`; also context, config, splits and script), the catalogue SHA-256 and the split SHA-256. Until environments exist (P10) the checker is the environment file.
+
+**Not done here** (later patches): the F1 horizon check (optimum within 12 steps of the trial section), landscape diagnostics and saturation (P9), baselines (P7, P8).

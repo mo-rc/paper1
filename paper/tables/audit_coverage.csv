@@ -1,0 +1,137 @@
+set,parameter,min,max,train_range,n_outside_train_range,share_outside
+train,span,9.0000,15.0000,9-15,0,0.0000
+train,width,4.0500,8.0000,4-8,0,0.0000
+train,dead,2.5010,5.0000,2.5-5,0,0.0000
+train,live,2.0000,5.0000,2-5,0,0.0000
+train,w_factored,56.0014,99.9749,56-100,0,0.0000
+train,restraint_ratio,0.0000,1.0000,"values 0, 0.25, 0.5, 1",0,0.0000
+train,in_hole,,,excluded from training,0,0.0000
+train,held_out_cell,,,excluded from training,0,0.0000
+val,span,9.0000,14.9900,9-15,0,0.0000
+val,width,4.2800,8.0000,4-8,0,0.0000
+val,dead,2.5010,4.9980,2.5-5,0,0.0000
+val,live,2.0040,4.9970,2-5,0,0.0000
+val,w_factored,56.0603,99.3855,56-100,0,0.0000
+val,restraint_ratio,0.0000,1.0000,"values 0, 0.25, 0.5, 1",0,0.0000
+val,in_hole,,,excluded from training,0,0.0000
+val,held_out_cell,,,excluded from training,0,0.0000
+t1,span,9.0000,15.0000,9-15,0,0.0000
+t1,width,4.2200,8.0000,4-8,0,0.0000
+t1,dead,2.5020,5.0000,2.5-5,0,0.0000
+t1,live,2.0020,4.9990,2-5,0,0.0000
+t1,w_factored,56.0008,99.9863,56-100,0,0.0000
+t1,restraint_ratio,0.0000,1.0000,"values 0, 0.25, 0.5, 1",0,0.0000
+t1,in_hole,,,excluded from training,0,0.0000
+t1,held_out_cell,,,excluded from training,0,0.0000
+t2,span,11.5000,12.5000,9-15,0,0.0000
+t2,width,5.4600,8.0000,4-8,0,0.0000
+t2,dead,2.5010,4.9980,2.5-5,0,0.0000
+t2,live,2.0910,4.9990,2-5,0,0.0000
+t2,w_factored,75.0139,84.9892,56-100,0,0.0000
+t2,restraint_ratio,0.0000,1.0000,"values 0, 0.25, 0.5, 1",0,0.0000
+t2,in_hole,,,excluded from training,500,1.0000
+t2,held_out_cell,,,excluded from training,0,0.0000
+t3-E1,span,15.0100,17.9800,9-15,500,1.0000
+t3-E1,width,4.2900,8.0000,4-8,0,0.0000
+t3-E1,dead,2.5130,4.9930,2.5-5,0,0.0000
+t3-E1,live,2.0230,4.9980,2-5,0,0.0000
+t3-E1,w_factored,56.0086,99.9789,56-100,0,0.0000
+t3-E1,restraint_ratio,0.0000,1.0000,"values 0, 0.25, 0.5, 1",0,0.0000
+t3-E1,in_hole,,,excluded from training,0,0.0000
+t3-E1,held_out_cell,,,excluded from training,0,0.0000
+t3-E2,span,9.0200,14.9900,9-15,0,0.0000
+t3-E2,width,5.8500,9.9900,4-8,320,0.6400
+t3-E2,dead,2.5140,6.4840,2.5-5,248,0.4960
+t3-E2,live,2.0290,6.4950,2-5,249,0.4980
+t3-E2,w_factored,100.0096,129.9903,56-100,500,1.0000
+t3-E2,restraint_ratio,0.0000,1.0000,"values 0, 0.25, 0.5, 1",0,0.0000
+t3-E2,in_hole,,,excluded from training,0,0.0000
+t3-E2,held_out_cell,,,excluded from training,0,0.0000
+t3-E3,span,15.0100,18.0000,9-15,500,1.0000
+t3-E3,width,5.6300,9.9900,4-8,324,0.6480
+t3-E3,dead,2.5280,6.4930,2.5-5,245,0.4900
+t3-E3,live,2.0430,6.4980,2-5,244,0.4880
+t3-E3,w_factored,100.0218,129.9292,56-100,500,1.0000
+t3-E3,restraint_ratio,0.0000,1.0000,"values 0, 0.25, 0.5, 1",0,0.0000
+t3-E3,in_hole,,,excluded from training,0,0.0000
+t3-E3,held_out_cell,,,excluded from training,0,0.0000
+t3-E4,span,9.0000,14.9900,9-15,0,0.0000
+t3-E4,width,4.3200,7.9900,4-8,0,0.0000
+t3-E4,dead,2.5010,4.9970,2.5-5,0,0.0000
+t3-E4,live,2.0060,4.9990,2-5,0,0.0000
+t3-E4,w_factored,56.0668,98.5037,56-100,0,0.0000
+t3-E4,restraint_ratio,0.3333,0.3333,"values 0, 0.25, 0.5, 1",500,1.0000
+t3-E4,in_hole,,,excluded from training,0,0.0000
+t3-E4,held_out_cell,,,excluded from training,0,0.0000
+t4,span,9.0000,15.0000,9-15,0,0.0000
+t4,width,4.0000,8.0000,4-8,0,0.0000
+t4,dead,2.5010,4.9930,2.5-5,0,0.0000
+t4,live,2.0020,4.9970,2-5,0,0.0000
+t4,w_factored,56.0177,99.9669,56-100,0,0.0000
+t4,restraint_ratio,0.2500,1.0000,"values 0, 0.25, 0.5, 1",0,0.0000
+t4,in_hole,,,excluded from training,0,0.0000
+t4,held_out_cell,,,excluded from training,1000,1.0000
+t5,span,9.0000,15.0000,9-15,0,0.0000
+t5,width,4.0000,8.0000,4-8,0,0.0000
+t5,dead,2.5000,5.0000,2.5-5,0,0.0000
+t5,live,2.0000,5.0000,2-5,0,0.0000
+t5,w_factored,57.0000,96.0000,56-100,0,0.0000
+t5,restraint_ratio,0.0000,1.0000,"values 0, 0.25, 0.5, 1",0,0.0000
+t5,in_hole,,,excluded from training,0,0.0000
+t5,held_out_cell,,,excluded from training,0,0.0000
+s12-val,span,9.0400,14.9900,9-15,0,0.0000
+s12-val,width,6.0000,6.0000,4-8,0,0.0000
+s12-val,dead,3.6330,6.4710,2.5-5,270,0.5400
+s12-val,live,2.9650,5.2830,2-5,68,0.1360
+s12-val,w_factored,56.1123,99.9621,56-100,0,0.0000
+s12-val,restraint_ratio,0.0000,0.0000,"values 0, 0.25, 0.5, 1",0,0.0000
+s12-val,in_hole,,,excluded from training,0,0.0000
+s12-val,held_out_cell,,,excluded from training,0,0.0000
+s12-t1,span,9.0000,15.0000,9-15,0,0.0000
+s12-t1,width,6.0000,6.0000,4-8,0,0.0000
+s12-t1,dead,3.6260,6.4730,2.5-5,996,0.4980
+s12-t1,live,2.9600,5.2840,2-5,239,0.1195
+s12-t1,w_factored,56.0106,99.9873,56-100,0,0.0000
+s12-t1,restraint_ratio,0.0000,0.0000,"values 0, 0.25, 0.5, 1",0,0.0000
+s12-t1,in_hole,,,excluded from training,0,0.0000
+s12-t1,held_out_cell,,,excluded from training,0,0.0000
+s12-t2,span,11.5000,12.5000,9-15,0,0.0000
+s12-t2,width,6.0000,6.0000,4-8,0,0.0000
+s12-t2,dead,4.8560,5.5000,2.5-5,381,0.7620
+s12-t2,live,3.9640,4.4900,2-5,0,0.0000
+s12-t2,w_factored,75.0096,84.9600,56-100,0,0.0000
+s12-t2,restraint_ratio,0.0000,0.0000,"values 0, 0.25, 0.5, 1",0,0.0000
+s12-t2,in_hole,,,excluded from training,500,1.0000
+s12-t2,held_out_cell,,,excluded from training,0,0.0000
+s12-E1,span,15.0100,17.9800,9-15,500,1.0000
+s12-E1,width,6.0000,6.0000,4-8,0,0.0000
+s12-E1,dead,3.6250,6.4720,2.5-5,262,0.5240
+s12-E1,live,2.9600,5.2830,2-5,66,0.1320
+s12-E1,w_factored,56.0025,99.9702,56-100,0,0.0000
+s12-E1,restraint_ratio,0.0000,0.0000,"values 0, 0.25, 0.5, 1",0,0.0000
+s12-E1,in_hole,,,excluded from training,0,0.0000
+s12-E1,held_out_cell,,,excluded from training,0,0.0000
+s12-E2,span,9.0200,14.9900,9-15,0,0.0000
+s12-E2,width,6.0000,6.0000,4-8,0,0.0000
+s12-E2,dead,6.4760,8.4130,2.5-5,500,1.0000
+s12-E2,live,5.2870,6.8680,2-5,500,1.0000
+s12-E2,w_factored,100.0386,129.9573,56-100,500,1.0000
+s12-E2,restraint_ratio,0.0000,0.0000,"values 0, 0.25, 0.5, 1",0,0.0000
+s12-E2,in_hole,,,excluded from training,0,0.0000
+s12-E2,held_out_cell,,,excluded from training,0,0.0000
+s12-E3,span,15.0100,17.9900,9-15,500,1.0000
+s12-E3,width,6.0000,6.0000,4-8,0,0.0000
+s12-E3,dead,6.4750,8.4160,2.5-5,500,1.0000
+s12-E3,live,5.2860,6.8700,2-5,500,1.0000
+s12-E3,w_factored,100.0215,129.9996,56-100,500,1.0000
+s12-E3,restraint_ratio,0.0000,0.0000,"values 0, 0.25, 0.5, 1",0,0.0000
+s12-E3,in_hole,,,excluded from training,0,0.0000
+s12-E3,held_out_cell,,,excluded from training,0,0.0000
+ref,span,9.0000,9.0000,9-15,0,0.0000
+ref,width,6.0000,6.0000,4-8,0,0.0000
+ref,dead,3.6750,3.6750,2.5-5,0,0.0000
+ref,live,3.0000,3.0000,2-5,0,0.0000
+ref,w_factored,56.7675,56.7675,56-100,0,0.0000
+ref,restraint_ratio,0.0000,1.0000,"values 0, 0.25, 0.5, 1",0,0.0000
+ref,in_hole,,,excluded from training,0,0.0000
+ref,held_out_cell,,,excluded from training,0,0.0000

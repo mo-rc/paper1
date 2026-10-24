@@ -1,0 +1,5 @@
+id,set,span,width,dead,live,restraint_ratio,deflection_rule,depth_cap,w_factored,slice_full_restraint
+ref-00000,ref,9.00,6.00,3.675,3.000,0.0,var360,none,56.7675,1
+ref-00001,ref,9.00,6.00,3.675,3.000,0.25,var360,none,56.7675,0
+ref-00002,ref,9.00,6.00,3.675,3.000,0.5,var360,none,56.7675,0
+ref-00003,ref,9.00,6.00,3.675,3.000,1.0,var360,none,56.7675,0

@@ -19,3 +19,12 @@ Parser: `src/ub_rl/catalogue.py`. Checker: `src/ub_rl/checker.py`. Open assumpti
 ## Research proposal
 
 The project proposal (one journal paper: Eurocode-verified environment, pre-registered benchmark, seven-parameter contexts including restraint and LTB, algorithm tournament, welded-section Stage 2) is in `docs/proposal.md`. The dated amendment A1 at the end of `docs/spec.md` records the matching changes to the pre-registration. Both await supervisor acceptance.
+
+## Splits and context audit (P6)
+
+Context ranges and splits: `docs/spec.md`, Amendment A2. Files and hashes: `data/splits/`. Audit (needs the workbook in `data/raw/`):
+
+```
+python scripts/context_audit.py            # writes splits, tables, docs/context_audit.md, results/audit/
+python scripts/context_audit.py --check    # regenerates in a temporary folder and compares with the committed files
+```
