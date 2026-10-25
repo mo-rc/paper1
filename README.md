@@ -4,6 +4,8 @@ Reinforcement learning for safe, automated selection of standard UK Universal Be
 
 Specification: `docs/spec.md`. Engineering concepts, formulas and code names for readers new to structural engineering: `docs/engineering_concepts.md`.
 
+Step-by-step instructions for running the code and reading its output: `docs/how_to_run.md`.
+
 ## Checker
 
 ```
