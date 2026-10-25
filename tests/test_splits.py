@@ -47,9 +47,10 @@ def test_manifest_hashes_match_files():
 
 def test_sizes(gen):
     sizes = {k: len(v) for k, v in gen.items()}
-    assert sizes == {"train": 20000, "val": 1000, "test_t1": 2000, "test_t2": 500, "test_t3": 2000, "test_t4": 1000, "test_t5": 3520, "v12_substudy": 4500, "reference": 4}
+    assert sizes == {"train": 20000, "val": 1000, "test_t1": 2000, "test_t2": 500, "test_t3": 1500, "test_t4": 1500, "test_t5": 3837, "v12_substudy": 4500, "reference": 4}
     c = Counter(r["set"] for r in gen["test_t3"])
-    assert c == {"t3-E1": 500, "t3-E2": 500, "t3-E3": 500, "t3-E4": 500}
+    assert c == {"t3-E1": 500, "t3-E2": 500, "t3-E3": 500}
+    assert Counter(r["set"] for r in gen["test_t4"]) == {"t4-A": 1000, "t4-B": 500}
 
 
 def test_every_row_is_a_valid_context(gen):
@@ -88,24 +89,33 @@ def test_t2_is_the_hole_and_otherwise_in_distribution(gen):
 
 
 def test_t3_sets_shift_exactly_what_they_say(gen):
-    rows = {k: [r for r in gen["test_t3"] if r["set"] == k] for k in ("t3-E1", "t3-E2", "t3-E3", "t3-E4")}
+    rows = {k: [r for r in gen["test_t3"] if r["set"] == k] for k in ("t3-E1", "t3-E2", "t3-E3")}
     held, _ = S.held_out_cells()
     for r in rows["t3-E1"] + rows["t3-E3"]:
         assert 15.0 < float(r["span"]) <= 18.0
     for r in rows["t3-E2"] + rows["t3-E3"]:
         assert 100.0 < float(r["w_factored"]) <= 130.0
-    for r in rows["t3-E1"] + rows["t3-E4"]:
+    for r in rows["t3-E1"]:
         assert S.W_BOX[0] <= float(r["w_factored"]) <= S.W_BOX[1]
-    for r in rows["t3-E2"] + rows["t3-E4"]:
+    for r in rows["t3-E2"]:
         assert S.SPAN[0] <= float(r["span"]) <= S.SPAN[1]
     for r in rows["t3-E1"] + rows["t3-E2"] + rows["t3-E3"]:
         assert float(r["restraint_ratio"]) in S.RESTRAINT_TRAIN and _cell(r) not in held
-    for r in rows["t3-E4"]:
-        assert float(r["restraint_ratio"]) == S.RESTRAINT_HELD_OUT and not S.in_hole(float(r["span"]), float(r["w_factored"]))
-    # E2 and E3 genuinely leave the training load ranges in at least one raw parameter in most contexts
+    # E2 genuinely leaves the training load ranges in at least one raw parameter in most contexts
     out = [any(not (lo <= float(r[k]) <= hi) for k, (lo, hi) in (("width", S.WIDTH), ("dead", S.DEAD), ("live", S.LIVE)))
            for r in rows["t3-E2"]]
     assert np.mean(out) > 0.5
+
+
+def test_t4b_unseen_restraint_value(gen):
+    rows = [r for r in gen["test_t4"] if r["set"] == "t4-B"]
+    for r in rows:
+        assert float(r["restraint_ratio"]) == S.RESTRAINT_HELD_OUT
+        assert S.SPAN[0] <= float(r["span"]) <= S.SPAN[1] and S.W_BOX[0] <= float(r["w_factored"]) <= S.W_BOX[1]
+        assert not S.in_hole(float(r["span"]), float(r["w_factored"]))
+    assert {(r["deflection_rule"], r["depth_cap"]) for r in rows} == {(a, S._cap_str(b)) for a in S.RULES for b in S.CAPS}
+    # between trained values: no untrained value lies outside the trained set's extremes (0 and 1 are trained)
+    assert min(S.RESTRAINT_TRAIN) == 0.0 and max(S.RESTRAINT_TRAIN) == 1.0
 
 
 def test_t5_lattice_is_exact_and_deterministic(gen):
@@ -118,7 +128,8 @@ def test_t5_lattice_is_exact_and_deterministic(gen):
         w = float(r["w_factored"])
         assert S.W_BOX[0] <= w <= S.W_BOX[1] and not S.in_hole(float(r["span"]), w) and _cell(r) not in held
         assert float(r["restraint_ratio"]) in S.RESTRAINT_TRAIN
-    assert len(rows) == len(pts) * 40  # every lattice point in all 40 trained cells
+    assert (9.0, 6.0, 3.675, 3.0) in pts  # the reference case is on the lattice (its own rows are in reference.csv)
+    assert len(rows) == len(pts) * 40 - 3  # every point in all 40 trained cells, less the 3 reference rows in trained cells
     assert S.generate_all()["test_t5"] == rows
 
 
@@ -156,12 +167,13 @@ def test_held_out_cells_and_t4(gen):
     cells = S.all_cells()
     assert len(cells) == 48 and len(held) == S.N_HELD_OUT_CELLS and set(held) <= set(cells)
     assert (0.0, "var360", None) not in held
+    assert sum(c[0] == 0.0 for c in held) == 1  # exactly one held-out cell without restraint
     train = [c for c in cells if c not in held]
     for i, j in ((0, 1), (0, 2), (1, 2)):  # only the triple is unseen
         assert {(c[i], c[j]) for c in train} == {(c[i], c[j]) for c in cells}
-    assert all(_cell(r) in held for r in gen["test_t4"])
+    assert all(_cell(r) in held for r in gen["test_t4"] if r["set"] == "t4-A")
     assert all(_cell(r) not in held for r in gen["train"])
-    assert {_cell(r) for r in gen["test_t4"]} == set(held)  # every held-out cell occurs in T4
+    assert {_cell(r) for r in gen["test_t4"] if r["set"] == "t4-A"} == set(held)  # every held-out cell occurs in T4
     assert [(float(r["restraint_ratio"]), r["deflection_rule"], S.cap_from_str(r["depth_cap"])) for r in rd("heldout_cells")] == list(held)
 
 
@@ -219,4 +231,4 @@ def test_abstention_list_matches_checker(C):
 def test_abstention_is_never_removed_from_split_files(C):
     n_ab = sum(1 for _ in csv.DictReader(open(SPLITS / "abstention_contexts.csv", newline="")))
     n_all = sum(len(rd(f)) for f in FILES)
-    assert n_all == 34524 and 0 < n_ab < n_all
+    assert n_all == 34841 and 0 < n_ab < n_all

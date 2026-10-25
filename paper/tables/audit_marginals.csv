@@ -1,0 +1,50 @@
+parameter,statistic,value
+span,mean,11.9958
+span,sd,1.7534
+span,min,9.0000
+span,p5,9.3000
+span,p50,11.9800
+span,p95,14.7000
+span,max,15.0000
+width,mean,6.5676
+width,sd,0.9044
+width,min,4.0500
+width,p5,4.9700
+width,p50,6.6500
+width,p95,7.8600
+width,max,8.0000
+dead,mean,3.8912
+dead,sd,0.6986
+dead,min,2.5010
+dead,p5,2.6930
+dead,p50,3.9510
+dead,p95,4.9040
+dead,max,5.0000
+live,mean,3.7363
+live,sd,0.8151
+live,min,2.0000
+live,p5,2.2980
+live,p50,3.8200
+live,p95,4.8910
+live,max,5.0000
+w_factored,mean,70.7304
+w_factored,sd,10.6157
+w_factored,min,56.0016
+w_factored,p5,57.1626
+w_factored,p50,68.6303
+w_factored,p95,91.4737
+w_factored,max,99.9749
+"width,dead",correlation,-0.2389
+"width,live",correlation,-0.3377
+"dead,live",correlation,-0.1503
+restraint_ratio,share 0.0,0.2718
+restraint_ratio,share 0.25,0.2237
+restraint_ratio,share 0.5,0.2281
+restraint_ratio,share 1.0,0.2764
+deflection_rule,share tot250,0.3257
+deflection_rule,share var200,0.3748
+deflection_rule,share var360,0.2994
+depth_cap,share 700,0.2752
+depth_cap,share 800,0.2530
+depth_cap,share 900,0.2227
+depth_cap,share none,0.2492

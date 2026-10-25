@@ -31,7 +31,7 @@ W_EXT = (100.0, 130.0)  # kN/m, lower bound open
 SPAN_EXT = (15.0, 18.0)  # m, lower bound open
 HOLE = {"span": (11.5, 12.5), "w": (75.0, 85.0)}  # closed block, as in spec section 8
 RESTRAINT_TRAIN = (0.0, 0.25, 0.5, 1.0)
-RESTRAINT_HELD_OUT = 1.0 / 3.0  # E4
+RESTRAINT_HELD_OUT = 1.0 / 3.0  # T4-B
 RULES = ("var360", "var200", "tot250")
 CAPS = (None, 700, 800, 900)  # mm; 500 and 600 of the proposal are infeasible for 73 to 100 % of the box (A2 audit)
 N_HELD_OUT_CELLS = 8
@@ -42,7 +42,7 @@ REFERENCE = dict(span=9.0, width=6.0, dead=3.675, live=3.0)
 
 # T5 lattice (supervisor's "lower, real, upper" idea as a deterministic test): end points and middle of each range
 LATTICE = {"span": (9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0), "width": (4.0, 6.0, 8.0),
-           "dead": (2.5, 3.75, 5.0), "live": (2.0, 3.5, 5.0)}
+           "dead": (2.5, 3.675, 5.0), "live": (2.0, 3.0, 5.0)}  # lower, real (reference), upper
 
 
 COLUMNS = ["id", "set", "span", "width", "dead", "live", "restraint_ratio", "deflection_rule", "depth_cap",
@@ -72,19 +72,23 @@ def all_cells():
 
 @functools.lru_cache(maxsize=None)
 def held_out_cells():
-    """The cells held out for T4 (unseen combinations). Seeded draw of 8 of 48 cells; the first draw that satisfies:
-    (a) the full-restraint primary cell (0, var360, none) stays in training; (b) every pair (restraint, rule),
-    (restraint, cap), (rule, cap) still occurs in a training cell, so only the triple is unseen."""
+    """The cells held out for T4-A (unseen combinations): 8 of 48. Seeded draw (seed 506, one `random()` per cell, the cells
+    with the smallest keys are taken, so the draw does not depend on library internals). Conditions, fixed in A2:
+    (a) exactly one held-out cell has restraint 0 (not the primary cell); (b) the primary cell (0, var360, none) stays in
+    training; (c) every pair (restraint, rule), (restraint, cap), (rule, cap) still occurs in a training cell, so only the
+    triple is unseen. The first draw satisfying all three is used; returns (cells, attempt number)."""
     cells = all_cells()
+    primary = (0.0, "var360", None)
     rng = random.Random(CELL_SEED)
     for attempt in range(1, 10001):
-        held = sorted(rng.sample(cells, N_HELD_OUT_CELLS), key=cells.index)
+        keys = sorted((rng.random(), i) for i in range(len(cells)))
+        held = [cells[i] for _, i in keys[:N_HELD_OUT_CELLS]]
         train = [c for c in cells if c not in held]
-        if (0.0, "var360", None) in held:
+        if primary in held or sum(c[0] == 0.0 for c in held) != 1:
             continue
         ok = all({(c[i], c[j]) for c in train} == {(c[i], c[j]) for c in cells} for i, j in ((0, 1), (0, 2), (1, 2)))
         if ok:
-            return tuple(held), attempt
+            return tuple(sorted(held, key=cells.index)), attempt
     raise RuntimeError("no admissible held-out cell set")
 
 
@@ -110,7 +114,8 @@ def in_hole(span, w):
 
 
 def lattice_rows(forbidden):
-    """T5: every lattice point in the box and outside H, in the trained (restraint, rule, cap) cells. No randomness."""
+    """T5: every lattice point in the box and outside H, in the trained (restraint, rule, cap) cells. No randomness. The
+    reference contexts lie on the lattice; they are in reference.csv and excluded here so that contexts stay unique."""
     held, _ = held_out_cells()
     rows = []
     for L, B, d, l in itertools.product(LATTICE["span"], LATTICE["width"], LATTICE["dead"], LATTICE["live"]):
@@ -183,9 +188,12 @@ def file_plan():
             SetSpec("t3-E1", 500, span=SPAN_EXT, span_lo_open=True, shift="span in (15, 18] m"),
             SetSpec("t3-E2", 500, shift="factored UDL in (100, 130] kN/m (extended load box)", **e_load),
             SetSpec("t3-E3", 500, span=SPAN_EXT, span_lo_open=True, shift="both E1 and E2", **e_load),
-            SetSpec("t3-E4", 500, restraints=(RESTRAINT_HELD_OUT,), cells="any", shift="restraint ratio 1/3 (never trained)"),
         ]),
-        "test_t4": (505, [SetSpec("t4", 1000, cells="heldout", shift="unseen (restraint, rule, cap) combinations")]),
+        "test_t4": (505, [
+            SetSpec("t4-A", 1000, cells="heldout", shift="unseen (restraint, rule, cap) combinations"),
+            SetSpec("t4-B", 500, restraints=(RESTRAINT_HELD_OUT,), cells="any",
+                    shift="restraint ratio 1/3 (never trained; between trained values, so interpolation in restraint)"),
+        ]),
     }
 
 
@@ -250,6 +258,8 @@ def generate_all():
         out[fname] = rows
     out["v12_substudy"] = generate_v12(forbidden)
     # T5 lattice: no randomness, generated last so the files above are unchanged
+    forbidden.update((REFERENCE["span"], REFERENCE["width"], REFERENCE["dead"], REFERENCE["live"], r, "var360", None)
+                     for r in RESTRAINT_TRAIN)
     out["test_t5"] = [_row("t5", k, c) for k, c in enumerate(lattice_rows(forbidden))]
     # reference contexts: reference case at each training restraint value (restraint 0 is the spec's reference case)
     out["reference"] = [

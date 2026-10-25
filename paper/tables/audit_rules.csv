@@ -1,6 +1,6 @@
 rule,description,value,threshold,pass
-R1,training-pool abstention share,0.1508,<= 0.25,1
-R2,smallest feasible share over the 40 training cells,0.4803,>= 0.25,1
+R1,guard: training-pool abstention share,0.1638,<= 0.25,1
+R2,guard: smallest feasible share over the 40 training cells,0.4803,>= 0.25,1
 R3,reference optima match the verification record (4 restraint values),4,= 4,1
 R4,duplicate contexts across all split files,0,= 0,1
 R5,"held-out cells: contexts of train, val, t1, t2, t3 (E1-E3) in a held-out cell",0,= 0,1

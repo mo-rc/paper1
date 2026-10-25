@@ -27,7 +27,7 @@ from ub_rl.checker import Checker
 
 DEFAULT_WORKBOOK = "data/raw/UB-secpropsdimsprops-EC3UKNA-UK-10-16-2026.xlsx"
 SPLIT_FILES = ["train", "val", "test_t1", "test_t2", "test_t3", "test_t4", "test_t5", "v12_substudy", "reference"]
-SET_ORDER = ["train", "val", "t1", "t2", "t3-E1", "t3-E2", "t3-E3", "t3-E4", "t4", "t5", "s12-val", "s12-t1", "s12-t2", "s12-E1",
+SET_ORDER = ["train", "val", "t1", "t2", "t3-E1", "t3-E2", "t3-E3", "t4-A", "t4-B", "t5", "s12-val", "s12-t1", "s12-t2", "s12-E1",
              "s12-E2", "s12-E3", "ref"]
 # Reference-case optima at restraint ratios 0, 0.25, 0.5, 1 (docs/verification_record.md, shear-centre row)
 EXPECTED_REF = {0.0: "457x191x74", 0.25: "533x210x82", 0.5: "610x229x101", 1.0: "686x254x140"}
@@ -132,9 +132,9 @@ def build(root, workbook):
                    "cap_binding": sum(l["cap_binding"] for l in feas)})
     write_rows(tdir / "audit_sets.csv", t1, list(t1[0]))
 
-    # ---- table 2: feasibility by cell (training pool, T4, E4)
+    # ---- table 2: feasibility by cell (training pool, T4-A, T4-B)
     t2 = []
-    for sname in ("train", "t4", "t3-E4"):
+    for sname in ("train", "t4-A", "t4-B"):
         cells = defaultdict(list)
         for r in rows_by_set[sname]:
             cells[(float(r["restraint_ratio"]), r["deflection_rule"], r["depth_cap"])].append(label_by_id[r["id"]]["status"])
@@ -217,9 +217,9 @@ def build(root, workbook):
     cell_rates = [1.0 - float(c["abstain_rate"]) for c in t2 if c["set"] == "train"]
     n_dup = sum(c - 1 for c in Counter(tuple(r[k] for k in S.COLUMNS[2:9]) for f in SPLIT_FILES for r in gen[f]).values())
     t6 = [
-        {"rule": "R1", "description": "training-pool abstention share", "value": tr["abstain_rate"], "threshold": f"<= {RULE_ABSTAIN_MAX}",
+        {"rule": "R1", "description": "guard: training-pool abstention share", "value": tr["abstain_rate"], "threshold": f"<= {RULE_ABSTAIN_MAX}",
          "pass": int(float(tr["abstain_rate"]) <= RULE_ABSTAIN_MAX)},
-        {"rule": "R2", "description": "smallest feasible share over the 40 training cells", "value": f4(min(cell_rates)),
+        {"rule": "R2", "description": "guard: smallest feasible share over the 40 training cells", "value": f4(min(cell_rates)),
          "threshold": f">= {RULE_CELL_FEASIBLE_MIN}", "pass": int(min(cell_rates) >= RULE_CELL_FEASIBLE_MIN)},
         {"rule": "R3", "description": "reference optima match the verification record (4 restraint values)",
          "value": str(sum(r["match"] for r in t5)), "threshold": "= 4", "pass": int(all(r["match"] for r in t5))},
@@ -247,6 +247,23 @@ def build(root, workbook):
                        "abstain_rate": f4(ab_n / len(sel))})
     write_rows(tdir / "audit_cap_alternatives.csv", t7, list(t7[0]))
 
+    # ---- table 9: effective marginals of the training pool (uniform draws, then rejection by w range, hole and held-out cells)
+    tm = []
+    tr_rows = rows_by_set["train"]
+    cont = {p_: np.array([float(r[p_]) for r in tr_rows]) for p_ in ("span", "width", "dead", "live", "w_factored")}
+    for p_, v in cont.items():
+        for stat, val in (("mean", v.mean()), ("sd", v.std()), ("min", v.min()), ("p5", np.percentile(v, 5)),
+                          ("p50", np.percentile(v, 50)), ("p95", np.percentile(v, 95)), ("max", v.max())):
+            tm.append({"parameter": p_, "statistic": stat, "value": f"{val:.4f}"})
+    for a_, b_ in (("width", "dead"), ("width", "live"), ("dead", "live")):
+        tm.append({"parameter": f"{a_},{b_}", "statistic": "correlation", "value": f"{np.corrcoef(cont[a_], cont[b_])[0, 1]:.4f}"})
+    for key, name in (("restraint_ratio", "restraint_ratio"), ("deflection_rule", "deflection_rule"), ("depth_cap", "depth_cap")):
+        cnt = Counter(r[key] for r in tr_rows)
+        for val in sorted(cnt):
+            tm.append({"parameter": name, "statistic": f"share {val}", "value": f4(cnt[val] / len(tr_rows))})
+    write_rows(tdir / "audit_marginals.csv", tm, list(tm[0]))
+    marg_ = {(r["parameter"], r["statistic"]): r["value"] for r in tm}
+
     # ---- manifest
     lines = []
     for name in SPLIT_FILES + ["heldout_cells", "abstention_contexts"]:
@@ -255,7 +272,7 @@ def build(root, workbook):
 
     # ---- short document, generated so that every number comes from the tables
     (root / "docs").mkdir(parents=True, exist_ok=True)
-    (root / "docs" / "context_audit.md").write_text(render_doc(t1, t5, t6, t8, held, attempt, lines), encoding="ascii", newline="\n")
+    (root / "docs" / "context_audit.md").write_text(render_doc(t1, t5, t6, t8, held, attempt, lines, {"workbook": sha256_file(workbook), "checker": sha256_file(ENV_FILE), "splits": sha256_file("src/ub_rl/splits.py")}, marg_), encoding="ascii", newline="\n")
 
     # ---- labels (not committed) and meta
     rdir = root / "results" / "audit"
@@ -273,29 +290,51 @@ def build(root, workbook):
     return t6
 
 
-def render_doc(t1, t5, t6, t8, held, attempt, manifest):
+def render_doc(t1, t5, t6, t8, held, attempt, manifest, prov, marg):
     L = ["# Context box and splits: feasibility audit (patch P6)", "",
          "Generated by `python scripts/context_audit.py`; the numbers are copied from `paper/tables/audit_*.csv`. "
          "Definitions and rules: `docs/spec.md`, Amendment A2. Preparation only: no RL training has been run.", "",
+         "## Provenance", "",
+         f"- Catalogue workbook `UB-secpropsdimsprops-EC3UKNA-UK-10-16-2026.xlsx`, SHA-256 `{prov['workbook']}`",
+         f"- `src/ub_rl/checker.py` (environment file), SHA-256 `{prov['checker']}`",
+         f"- `src/ub_rl/splits.py`, SHA-256 `{prov['splits']}`",
+         "- Who ran the audit and when: `docs/verification_record.md`, section P6.", "",
          "## Sets", "",
          "| Set | n | Feasible | Abstain | Abstain rate | No section passes the code checks | Feasible sections all deeper than the cap | Distinct optima |",
          "|---|---|---|---|---|---|---|---|"]
     for r in t1:
         L.append(f"| {r['set']} | {r['n']} | {r['n_feasible']} | {r['n_abstain']} | {r['abstain_rate']} | {r['abstain_code']} | "
                  f"{r['abstain_depth']} | {r['distinct_optima']} |")
-    L += ["", "Abstention contexts are listed in `data/splits/abstention_contexts.csv`; none is removed from any split file.", "",
+    code = [f"{r['set']} ({r['abstain_code']})" for r in t1 if int(r["abstain_code"]) > 0]
+    L += ["", "Abstention contexts are listed in `data/splits/abstention_contexts.csv`; none is removed from any split file. "
+          "Contexts that no section can carry (code checks fail for every section, whatever the cap): " + (", ".join(code) or "none") +
+          ". Results on every test set are reported on feasible contexts with n_feasible and n_abstain shown (A2, reporting rule).", "",
           "## Reference case by restraint ratio", "", "| Restraint ratio | Lightest feasible UB (C) | Expected (verification record) | Lightest in C+ (107 sections) |", "|---|---|---|---|"]
     for r in t5:
         L.append(f"| {r['restraint_ratio']} | {r['optimum']} | {r['expected']} | {r['optimum_Cplus']} |")
-    L += ["", "## Set C+ (107 sections) against C", "",
+    L += ["", "## Effective distribution of the training pool", "",
+          "Parameters are drawn uniformly and then rejected if the factored UDL is outside its range, the context lies in the hole, "
+          "or its (restraint, rule, cap) cell is held out, so the marginals are not uniform. Full table: `paper/tables/audit_marginals.csv`.", "",
+          "| Parameter | Mean | SD | p5 | p50 | p95 |", "|---|---|---|---|---|---|"]
+    for p_ in ("span", "width", "dead", "live", "w_factored"):
+        L.append(f"| {p_} | {float(marg[(p_, 'mean')]):.3f} | {float(marg[(p_, 'sd')]):.3f} | {float(marg[(p_, 'p5')]):.3f} | "
+                 f"{float(marg[(p_, 'p50')]):.3f} | {float(marg[(p_, 'p95')]):.3f} |")
+    L += ["", "Correlations: " + ", ".join(f"{k} {float(marg[(k, 'correlation')]):.3f}" for k in ("width,dead", "width,live", "dead,live")) + ".", "",
+          "## Set C+ (107 sections) against C", "",
+          "C is the primary catalogue. C+ adds the 16 rows the workbook marks \"+\" (additional to BS EN 10365); no rule for their stock "
+          "availability is recorded (spec sections 4 and 15), so C+ is a sensitivity check only.", "",
           "| Set | Abstain in C | Abstain in C+ | Feasible only in C+ | Optimum lighter in C+ | Share of feasible |", "|---|---|---|---|---|---|"]
     for r in t8:
         L.append(f"| {r['set']} | {r['abstain_C']} | {r['abstain_Cplus']} | {r['feasible_only_in_Cplus']} | "
                  f"{r['optimum_lighter_in_Cplus']} | {r['share_lighter']} |")
-    L += ["", "## Audit rules (A2)", "", "| Rule | Description | Value | Threshold | Pass |", "|---|---|---|---|---|"]
+    r1 = {r["rule"]: r for r in t6}
+    L += ["", "## Audit rules (A2)", "",
+          f"R1 and R2 are regression guards: they were fixed after the first audit and the observed values (R1 {r1['R1']['value']}, "
+          f"R2 {r1['R2']['value']}) are far from their thresholds, so they cannot fail on this box. R3 to R5 are the substantive checks.", "",
+          "| Rule | Description | Value | Threshold | Pass |", "|---|---|---|---|---|"]
     for r in t6:
         L.append(f"| {r['rule']} | {r['description']} | {r['value']} | {r['threshold']} | {'yes' if int(r['pass']) else 'NO'} |")
-    L += ["", "## Held-out cells for T4 (seed 506, draw %d)" % attempt, "", "| Restraint ratio | Deflection rule | Depth cap |", "|---|---|---|"]
+    L += ["", "## Held-out cells for T4-A (seed 506, draw %d)" % attempt, "", "| Restraint ratio | Deflection rule | Depth cap |", "|---|---|---|"]
     for r, rule, cap in held:
         L.append(f"| {r:g} | {rule} | {S._cap_str(cap)} |")
     L += ["", "## File hashes (SHA-256)", "", "```"] + manifest + ["```", "",

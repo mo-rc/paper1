@@ -146,6 +146,8 @@ Status at 2026-10-19 (superseded; Gate 2 accepted 23 October 2026, see Gate 2 st
 
 **Gate 2 status.** Accepted, 23 October 2026. All 12 assumptions agreed and the review form signed by the supervising engineer (Dr. Mudasir Hussain; `docs/gate2_signoff.md`); the 14 cases were recomputed by calculator by Muhammad Shifa (the supervising engineer did not recompute individual cases); resistances agree with the Blue Book for all 107 sections.
 
-## P6: context box audit (2026-10-23)
+## P6: context box audit (2026-10-24, revised 2026-10-25)
 
-Enumeration over C for all 34,524 context-file rows (one checker call each on C and on C+) by `scripts/context_audit.py`; tables `paper/tables/audit_*.csv`, summary `docs/context_audit.md`. The reference optima at restraint ratios 0, 0.25, 0.5 and 1 reproduce the optima recorded above (457x191x74, 533x210x82, 610x229x101, 686x254x140). The checker, config and context code are unchanged. Tests: `tests/test_splits.py`.
+Run by Claude (AI assistant) for the project lead in the project session of 2026-10-24 to 2026-10-25; the first version of the audit files was superseded on 2026-10-25 after review (A2, revision note). Reproduction on the project lead's machine: `python scripts/context_audit.py --check` reported `checked 21 files; differing or missing: none` (reported by the project lead on 2026-10-25, for the first version; to be repeated for the revised files). The catalogue workbook SHA-256, the checker SHA-256 and the splits SHA-256 are in `docs/context_audit.md`.
+
+Enumeration over C for every context-file row (one checker call each on C and on C+) by `scripts/context_audit.py`; tables `paper/tables/audit_*.csv`, summary `docs/context_audit.md`. The reference optima at restraint ratios 0, 0.25, 0.5 and 1 reproduce the optima recorded above (457x191x74, 533x210x82, 610x229x101, 686x254x140). The checker, config and context code are unchanged. Tests: `tests/test_splits.py`.

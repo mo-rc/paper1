@@ -15,7 +15,7 @@ pip install -e ".[test]"
 
 | Command | What it does | Good result |
 |---|---|---|
-| `python -m pytest -q` | Runs all automatic tests of the checker, the parser and the splits. About 15 seconds. | `154 passed` (with the workbooks present) |
+| `python -m pytest -q` | Runs all automatic tests of the checker, the parser and the splits. About 15 seconds. | `155 passed` (with the workbooks present) |
 | `python scripts/reference_case.py` | Designs one beam for the reference floor (9 m span) and prints the checks. | first line ends `lightest feasible = 457x191x74` |
 | `python scripts/context_audit.py --check` | Rebuilds every split file and audit table in a temporary folder and compares them with the committed files. A few minutes. | `differing or missing: none` |
 
