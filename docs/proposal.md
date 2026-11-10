@@ -51,7 +51,7 @@ The catalogue study (Stage 1) is the controlled testbed with a known exact optim
 
 **Seven context parameters** (the policy must generalize across them): span, tributary width, dead load, live load, lateral restraint spacing (Lcr/L equal to 0, up to 0.5, or 1), deflection rule (three rules), depth limit (none, 700, 800 or 900 mm).
 
-> Note (dated, record of a change): this proposal originally stated depth limits none, 500, 600 or 700 mm. Amendment A2 to `docs/spec.md` (2026-10-24, revised 2026-10-25, before any RL run) changed them to none, 700, 800 or 900 mm after a checker-only feasibility audit found the 500 and 600 mm caps leave 70–100 % of contexts without any feasible section (`paper/tables/audit_cap_alternatives.csv`). The original values remain on record in the A2 superseded table in `docs/spec.md`. The A2 values are working values pending supervisor confirmation; no such confirmation is claimed here.
+> Note (dated, record of a change): this proposal originally stated depth limits none, 500, 600 or 700 mm. Amendment A2 to `docs/spec.md` (2026-10-24, revised 2026-10-25, before any RL run) changed them to none, 700, 800 or 900 mm after a checker-only feasibility audit found the 500 and 600 mm caps leave 70–100 % of contexts without any feasible section (`paper/tables/audit_cap_alternatives.csv`). The original values remain on record in the A2 superseded table in `docs/spec.md`. The supervisor has since approved the A2 values — the depth caps none/700/800/900 mm and the frozen splits including the T5 lattice (approval recorded 2026-11-10 in `docs/spec.md` A2).
 
 ## 6. Method
 

@@ -20,7 +20,7 @@ Parser: `src/ub_rl/catalogue.py`. Checker: `src/ub_rl/checker.py`. Open assumpti
 
 ## Research proposal
 
-The project proposal (one journal paper: Eurocode-verified environment, pre-registered benchmark, seven-parameter contexts including restraint and LTB, algorithm tournament, welded-section Stage 2) is in `docs/proposal.md`. The dated amendment A1 at the end of `docs/spec.md` records the matching changes to the pre-registration. Both await supervisor acceptance. The dated amendment A2 at the end of `docs/spec.md` fixes the seven-parameter sampling ranges, the depth caps (none, 700, 800, 900 mm) and the frozen train/validation/test splits (T1–T5, v1.2 sub-study) with their SHA-256; these values are recorded before any run and await supervisor confirmation (none is claimed here).
+The project proposal (one journal paper: Eurocode-verified environment, pre-registered benchmark, seven-parameter contexts including restraint and LTB, algorithm tournament, welded-section Stage 2) is in `docs/proposal.md`. The dated amendment A1 at the end of `docs/spec.md` records the matching changes to the pre-registration. Both await supervisor acceptance. The dated amendment A2 at the end of `docs/spec.md` fixes the seven-parameter sampling ranges, the depth caps (none, 700, 800, 900 mm) and the frozen train/validation/test splits (T1–T5, v1.2 sub-study) with their SHA-256; these values were recorded before any run and are supervisor-approved (approval recorded 2026-11-10 in `docs/spec.md` A2).
 
 ## Splits and context audit (P6)
 
