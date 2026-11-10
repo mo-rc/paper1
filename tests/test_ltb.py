@@ -1,4 +1,6 @@
-"""LTB tests (spec amendment A1). Not Gate 2: Blue Book Mb,Rd comparison and a second implementation are still required."""
+"""LTB tests (spec amendment A1). Gate 2 evidence for LTB: the Blue Book Mb,Rd comparison is in `tests/test_bluebook.py`
+and the second scalar implementation is in `tests/test_ltb_reference.py` (Gate 2 accepted 23 October 2026,
+`docs/gate2_signoff.md`)."""
 import math
 from dataclasses import replace
 
@@ -132,7 +134,9 @@ def test_full_span_uses_udl_factors_and_ignores_segment_factors(C):
 
 
 def test_reference_optimum_by_restraint_ratio(C):
-    """Exploratory values (unvalidated until Gate 2): shear-centre loading, self-weight included, 56.7675 kN/m, 9 m."""
+    """Reference-case optima per restraint ratio: shear-centre loading, self-weight included, 56.7675 kN/m, 9 m.
+    Validated since Gate 2 (accepted 23 October 2026, docs/verification_record.md); the four trained ratios
+    (0, 0.25, 0.5, 1) are fixed as audit rule R3 (docs/spec.md, Amendment A2)."""
     expected = {0.0: "457x191x74", 0.25: "533x210x82", 1 / 3: "533x210x92", 0.5: "610x229x101", 1.0: "686x254x140"}
     for ratio, name in expected.items():
         K = _K(C, restraint_ratio=ratio)
