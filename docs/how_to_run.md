@@ -20,6 +20,8 @@ pip install -e ".[test]"
 | `python scripts/context_audit.py --check` | Rebuilds every split file and audit table in a temporary folder and compares them with the committed files. A few minutes. | `differing or missing: none` |
 | `python scripts/run_baselines1.py` | Runs the four Stage 1 baselines (enumeration, ordered scan, heuristic iteration, random search) over all 34,841 split contexts and stores every design in `results/baselines1/`. Single-threaded, about 50 minutes. `--limit N` is a quick smoke run. | last line `enumeration == ordered scan on every context: True` |
 | `python scripts/baselines1_summary.py` | Prints, for every set, how often the heuristic and each random-search budget reach the optimum, wrongly abstain, and their mean gap (reads `results/baselines1/`). A few seconds. | 45 lines; random search at budget 91 always shows mean gap 0.000% and 0 false abstentions |
+| `python scripts/landscape_diagnostics.py` | Runs the P9 landscape and saturation diagnostics over all 34,841 contexts: monotonicity counter, F1 horizon check, governing checks, alternatives, the saturation table (V headline) and the reward-ordering assertion on V; writes `paper/tables/p9_*.csv`, `docs/gate3_record.md` and `results/p9/`. Single-threaded, about 2 minutes. `--limit N` is a quick sample that writes nothing committed. | exit 0; `docs/gate3_record.md` states the saturation outcome per set |
+| `python scripts/landscape_diagnostics.py --check` | Rebuilds every P9 table and the Gate 3 record in a temporary folder and compares them with the committed files. About 4 minutes. | `identical (7 files)` |
 
 If `pytest` reports many `skipped`, the workbooks are not in `data/raw/`.
 
