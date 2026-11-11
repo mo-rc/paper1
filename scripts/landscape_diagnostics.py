@@ -183,7 +183,7 @@ def build(root, workbook, limit=None, out_results=None):
                 if not bool(kc.evaluate_context(ctx, [hres.index])["feasible"][0]):
                     inf_out = 1
             infeasible_outputs += inf_out
-            heur_exact += int(hres.index == opt)
+            heur_exact += int(hres.index == opt and opt >= 0)  # exact over the feasible contexts
             false_abstain += int(opt >= 0 and hres.index < 0)
             scan_calls = int(opt + 1) if opt >= 0 else len(kc)  # ordered scan: exact by definition
             ctx_rows.append({
@@ -204,7 +204,7 @@ def build(root, workbook, limit=None, out_results=None):
                                           "heur_calls": 0, "scan_calls": 0, "heur_outputs": 0,
                                           "false_abstain": 0, "infeasible_outputs": 0, "governing": Counter()})
             a["n"] += 1
-            a["heur_exact"] += int(hres.index == opt)
+            a["heur_exact"] += int(hres.index == opt and opt >= 0)  # exact over the feasible contexts
             a["heur_calls"] += hres.calls
             a["scan_calls"] += scan_calls
             a["heur_outputs"] += int(hres.index >= 0)

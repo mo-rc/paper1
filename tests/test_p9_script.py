@@ -46,6 +46,11 @@ def test_saturation_csv_headline_line_is_val(sample_run):
         rows = list(csv.DictReader(f))
     assert rows and rows[0]["set"] == "val"
     assert {r["set"] for r in rows} == {"val", "train", "t1", "t2", "t3-E1", "t4-A", "t5", "s12-val", "ref"}
+    for r in rows:
+        # the exact count is over the feasible contexts, so the share is at most 1
+        assert int(r["heuristic_exact"]) <= int(r["n_feasible"])
+        assert float(r["exact_share"]) <= 1.0 + 1e-9
+        assert int(r["ordered_scan_exact"]) == 1  # exact by definition on every context
 
 
 def test_record_has_saturation_headline_and_family_rows(sample_run):
