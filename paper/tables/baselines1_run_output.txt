@@ -1,0 +1,90 @@
+# P7 Stage 1 baselines: full-run output snapshot (2026-11-11)
+# Run made from commit b5aadf4af71d6eb3cc507bdcd36b50c8f8db5114 (clean working tree; commit recorded in results/baselines1/run_summary.json).
+# Printed output of: python scripts/baselines1_summary.py results/baselines1
+# The SHA-256 lines below are: sha256sum results/baselines1/*.csv (the same hashes are recorded in each *_meta.json).
+# results/ itself stays git-ignored; archive the folder (e.g. Zenodo) at submission.
+
+train         heuristic budget   -  exact  16723  false-abstain      0  mean gap   0.000%  (rows 20000)
+train         random    budget  10  exact  18368  false-abstain  58150  mean gap  27.786%  (rows 200000)
+train         random    budget  20  exact  36699  false-abstain  35460  mean gap  14.767%  (rows 200000)
+train         random    budget  50  exact  91564  false-abstain  12912  mean gap   4.358%  (rows 200000)
+train         random    budget  91  exact 167230  false-abstain      0  mean gap   0.000%  (rows 200000)
+val           heuristic budget   -  exact    796  false-abstain      0  mean gap   0.000%  (rows 1000)
+val           random    budget  10  exact    870  false-abstain   2679  mean gap  27.823%  (rows 10000)
+val           random    budget  20  exact   1765  false-abstain   1618  mean gap  14.823%  (rows 10000)
+val           random    budget  50  exact   4371  false-abstain    579  mean gap   4.437%  (rows 10000)
+val           random    budget  91  exact   7960  false-abstain      0  mean gap   0.000%  (rows 10000)
+test_t1       heuristic budget   -  exact   1635  false-abstain      0  mean gap   0.000%  (rows 2000)
+test_t1       random    budget  10  exact   1761  false-abstain   5675  mean gap  28.348%  (rows 20000)
+test_t1       random    budget  20  exact   3607  false-abstain   3376  mean gap  14.696%  (rows 20000)
+test_t1       random    budget  50  exact   9004  false-abstain   1162  mean gap   4.396%  (rows 20000)
+test_t1       random    budget  91  exact  16350  false-abstain      0  mean gap   0.000%  (rows 20000)
+test_t2       heuristic budget   -  exact    388  false-abstain      0  mean gap   0.000%  (rows 500)
+test_t2       random    budget  10  exact    432  false-abstain   1525  mean gap  25.070%  (rows 5000)
+test_t2       random    budget  20  exact    860  false-abstain    918  mean gap  14.901%  (rows 5000)
+test_t2       random    budget  50  exact   2165  false-abstain    277  mean gap   5.063%  (rows 5000)
+test_t2       random    budget  91  exact   3880  false-abstain      0  mean gap   0.000%  (rows 5000)
+test_t3       heuristic budget   -  exact    609  false-abstain      0  mean gap   0.000%  (rows 1500)
+test_t3       random    budget  10  exact    689  false-abstain   2497  mean gap  26.227%  (rows 15000)
+test_t3       random    budget  20  exact   1349  false-abstain   1601  mean gap  14.293%  (rows 15000)
+test_t3       random    budget  50  exact   3345  false-abstain    628  mean gap   4.255%  (rows 15000)
+test_t3       random    budget  91  exact   6090  false-abstain      0  mean gap   0.000%  (rows 15000)
+test_t4       heuristic budget   -  exact   1404  false-abstain      0  mean gap   0.000%  (rows 1500)
+test_t4       random    budget  10  exact   1526  false-abstain   4578  mean gap  27.212%  (rows 15000)
+test_t4       random    budget  20  exact   3130  false-abstain   2619  mean gap  14.479%  (rows 15000)
+test_t4       random    budget  50  exact   7729  false-abstain    862  mean gap   4.256%  (rows 15000)
+test_t4       random    budget  91  exact  14040  false-abstain      0  mean gap   0.000%  (rows 15000)
+test_t5       heuristic budget   -  exact   3102  false-abstain      0  mean gap   0.000%  (rows 3837)
+test_t5       random    budget  10  exact   3427  false-abstain  10382  mean gap  28.113%  (rows 38370)
+test_t5       random    budget  20  exact   6789  false-abstain   6211  mean gap  15.044%  (rows 38370)
+test_t5       random    budget  50  exact  16960  false-abstain   2154  mean gap   4.452%  (rows 38370)
+test_t5       random    budget  91  exact  31020  false-abstain      0  mean gap   0.000%  (rows 38370)
+v12_substudy  heuristic budget   -  exact   4500  false-abstain      0  mean gap   0.000%  (rows 4500)
+v12_substudy  random    budget  10  exact   4949  false-abstain    884  mean gap  36.200%  (rows 45000)
+v12_substudy  random    budget  20  exact   9947  false-abstain     46  mean gap  16.113%  (rows 45000)
+v12_substudy  random    budget  50  exact  24835  false-abstain      0  mean gap   3.876%  (rows 45000)
+v12_substudy  random    budget  91  exact  45000  false-abstain      0  mean gap   0.000%  (rows 45000)
+reference     heuristic budget   -  exact      4  false-abstain      0  mean gap   0.000%  (rows 4)
+reference     random    budget  10  exact      1  false-abstain      0  mean gap  43.293%  (rows 40)
+reference     random    budget  20  exact      5  false-abstain      0  mean gap  19.260%  (rows 40)
+reference     random    budget  50  exact     21  false-abstain      0  mean gap   4.017%  (rows 40)
+reference     random    budget  91  exact     40  false-abstain      0  mean gap   0.000%  (rows 40)
+
+
+# sha256sum results/baselines1/*.csv
+9d9ba2bebfe0d53d0081c88fc96bb853ed142a693b17b395e53e763aaa619b6e  results/baselines1/enumeration_reference.csv
+20034ef0cd1fd779ebbeacf153a38cdb30ec6dfbf51e0818d3eb0a98ba96cfe9  results/baselines1/enumeration_test_t1.csv
+36f1edca7ee246f06a0f1a0bb5b05c4b22bee0ae39e4f64110dfcc2d668cb2a2  results/baselines1/enumeration_test_t2.csv
+20214fb1542e9d2da52b4c6c22bf51f9224ab205cd4118aff359f40263936013  results/baselines1/enumeration_test_t3.csv
+8141147dc741bb115fc378206e0aba383b36055b9b30fef2578e1131d7177f4d  results/baselines1/enumeration_test_t4.csv
+5c5b7a7911ff842da0b4bad0535fe7126713d1be96e77281ffc5a030b7da0158  results/baselines1/enumeration_test_t5.csv
+8076f35b42b50ee7dfdc92aef29e84ae5494e48000fcf071dc477f26e03d5727  results/baselines1/enumeration_train.csv
+73ced64c430364ee063b18294e81133c5e592bbdcefb7b037a0c3ba4e30c8bd7  results/baselines1/enumeration_v12_substudy.csv
+f17bac582f260ce7fa3540e444b49dc064a1eb6d97e872831349b22f764fd5a0  results/baselines1/enumeration_val.csv
+6300e242c5208b4d01633c95ab72655838cb32ad29a653d1d9f2aaf72e1981f6  results/baselines1/heuristic_reference.csv
+78adaf513180b25c54fabd4421437c89b6317c657469ada21ea57137725d3696  results/baselines1/heuristic_test_t1.csv
+425290a0db28db5f52944c1b7877ff81401cba00397f32084a0d8f9aafd11645  results/baselines1/heuristic_test_t2.csv
+1821d9335e928c83e2bd3f53c04b3f201817b496f5cd443215eddd3706ada2f1  results/baselines1/heuristic_test_t3.csv
+42a6d0c6deb92f2923c0081d202b6e1e06cd9067bd8162c36f588e05e09378df  results/baselines1/heuristic_test_t4.csv
+296b7222b3092b1b14308bdc23b4de7a5856b80f20c4f09ae12291100ffa22ac  results/baselines1/heuristic_test_t5.csv
+70a8690ae531fa4fb694952ac5260cf33056265c715ce96fd1198d57624e48df  results/baselines1/heuristic_train.csv
+37045404d9d22ddfd1eb5171b4b5ba3e08c6ca7f274785472f6925af584fdb62  results/baselines1/heuristic_v12_substudy.csv
+d020650e6f680aa9728145770b29d6df410f69e58b5b0415788ca4b2542d633f  results/baselines1/heuristic_val.csv
+4addfe90b343e72039dc7cec60aab5b7eb69f3e6792b2d6fb7664f5bd36ec689  results/baselines1/ordered_scan_reference.csv
+fd53c1b373901d0377752938ac08233a261a73ae9de56490c8f62156918c6d93  results/baselines1/ordered_scan_test_t1.csv
+846b6a48981c5365e65fb8e113a6b3a780a0dadf607af1bb74e9b19875d5f3f1  results/baselines1/ordered_scan_test_t2.csv
+43d3e7da7c7542327b4b5d096138ca6d9d7b0e360bc63ce4d52dfdd28b97e5f3  results/baselines1/ordered_scan_test_t3.csv
+56a3e481911f6caf9aaa7f0c0559b4ae1ff2e1825711f837eca9af6141be34a1  results/baselines1/ordered_scan_test_t4.csv
+a68bd24fc5feff517fbc961ffb5f015d6951c1956c7bf2f8b0b7550587d61aa7  results/baselines1/ordered_scan_test_t5.csv
+2e956cf656c12362a081732ef0a85e8680c57782a6763247569bea0163e2b176  results/baselines1/ordered_scan_train.csv
+4eb57d52c47b135ef0ea9ef9fa69fd42ed8ce180b8547377fde7dccd990264e3  results/baselines1/ordered_scan_v12_substudy.csv
+621e0145c6feed14b5a76dcf5ff1da3975b71096b44b3e39e002b301a1f34c24  results/baselines1/ordered_scan_val.csv
+dfb8974498b2e425829cc8e634910cde05b538ec8787f50ceed6173d323d2846  results/baselines1/random_reference.csv
+4fd78f172493e0468158291cdc2be9d238c64d299391bccb9841841bde369b8b  results/baselines1/random_test_t1.csv
+36aa8787ecf34f01711c5da811678774301d8ddb4b67e3ed73d3fab714fe0598  results/baselines1/random_test_t2.csv
+7fa21fe7c7dcb304f8b578c48570fd0bbf1cffdd9ac7984202e997c6d9f4e278  results/baselines1/random_test_t3.csv
+fec42b99dd80a41bdaed74dbb4294cc36e1e72b2226fd64901226b23f6093670  results/baselines1/random_test_t4.csv
+8a633557e1e8349b87671be497494a4c4495c0b75c7402e9378ea0b88c1b87d6  results/baselines1/random_test_t5.csv
+7acabb6aab8e849b8600b8ed67e9253ae71c67ee6ced25d10e2d194211fe29e2  results/baselines1/random_train.csv
+e5bcb823759265ffc815de35ac05b566385035b38dfe7fc87f37ae33a6c236f7  results/baselines1/random_v12_substudy.csv
+ea14aff7fa9c8c12cfd41a3513a92398967f12a7b81cc722d6a4ffb1abea1355  results/baselines1/random_val.csv

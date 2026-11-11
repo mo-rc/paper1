@@ -174,7 +174,7 @@ Tests: 7 new (random order stable, per seed and context, nested; heuristic never
 
 Run by the project lead (machine in `results/baselines1/*_meta.json`) on `review` with P7b applied: `python scripts/run_baselines1.py`, then `python scripts/baselines1_summary.py results/baselines1`. Numbers below are copied from the printed output; Claude did not run this.
 
-**Acceptance criteria met.** 34,841 contexts; `enumeration == ordered scan on every context: True`; calls logged per design; 36 result files each with its meta file. Feasible and abstain counts per set equal `paper/tables/audit_sets.csv` (train 16,723 / 3,277; val 796 / 204; T1 1,635 / 365; T2 388 / 112; T3 609 / 891; T4 1,404 / 96; T5 3,102 / 735; v1.2 sub-study 4,500 / 0; reference 4 / 0).
+**Acceptance criteria met.** 34,841 contexts; `enumeration == ordered scan on every context: True`; calls logged per design; 36 result files each with its meta file. Feasible and abstain counts per set equal `paper/tables/audit_sets.csv` (train 16,723 / 3,277; val 796 / 204; T1 1,635 / 365; T2 388 / 112; T3 609 / 891; T4 1,404 / 96; T5 3,102 / 735; v1.2 sub-study 4,500 / 0; reference 4 / 0). The printed summary output and the SHA-256 of all 36 result CSVs (same hashes as in the `*_meta.json` files) are committed in `paper/tables/baselines1_run_output.txt`, so every number below can be checked against the committed snapshot; `results/` itself stays git-ignored and is archived at submission (e.g. Zenodo).
 
 **Mean checker calls per context** (enumeration 91 everywhere; random search 42.75 = mean of budgets 10, 20, 50, 91):
 
