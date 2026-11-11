@@ -205,7 +205,6 @@ Defaults below are working assumptions, not approvals. Each item that changes th
 | Shear buckling eta | From the UK NA to EN 1993-1-5, to be read from the text | Decides whether any section needs the shear buckling check |
 | Extra context parameters (for example depth cap h <= h_max) | Not in the frozen study | Needs a design requirement and an amendment |
 | Construction-stage stability | Not checked | Out of scope, stated as a limitation |
-| F1 horizon | 12 steps (section 9) | Amended to 13 steps by A3 (2026-11-11); project lead approved, supervisor confirmation pending |
 
 ## Amendments
 
@@ -351,7 +350,7 @@ T4-B is interpolation in restraint: 0 and 1 are the ends of the allowed set and 
 
 ### Amendment A3 (2026-11-11, before any RL run): F1 horizon 13 steps (patch P9)
 
-Status: recorded before any RL run, after the P9 full-run horizon check. The project lead approved amending the horizon on 2026-11-11; **supervisor confirmation is pending** (section 15).
+Status: recorded before any RL run, after the P9 full-run horizon check. The project lead approved amending the horizon on 2026-11-11; the supervisor approved the amended horizon of 13 steps on 2026-11-11 (recorded here).
 
 Background: the P9 full run (`paper/tables/p9_horizon.csv`, committed) found 17 feasible contexts whose optimum lies more than 12 F1 steps from the trial section, all in T3 (E1: 4 of 194, E2: 1 of 304, E3: 12 of 111), and a largest F1 distance of 13 steps anywhere. Section 9 says the horizon is amended before training in exactly this case.
 
