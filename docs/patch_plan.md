@@ -28,7 +28,7 @@ Every step of the project is one patch: one commit, its own tests, its own accep
 
 ### Gate 4: Stage 1 learning
 
-**P10 Environments and rewards.** Direct choice (F0), refinement (F1) and constructive (F2) environments; reward families R1 (R-A), R2 (R-B), R3 (F2 only), R-C and R-D as defined in the spec (the ordering assertion is already in P9; P10 reuses it as a test). *Accepted when:* the environments pass their unit tests (step semantics, no-op at the catalogue ends, horizon 12, one checker call per sampled section) and the ordering assertion still passes.
+**P10 Environments and rewards.** Direct choice (F0), refinement (F1) and constructive (F2) environments; reward families R1 (R-A), R2 (R-B), R3 (F2 only), R-C and R-D as defined in the spec (the ordering assertion is already in P9; P10 reuses it as a test). *Accepted when:* the environments pass their unit tests (step semantics, no-op at the catalogue ends, horizon 13 as amended by A3, one checker call per sampled section) and the ordering assertion still passes.
 
 **P11 Agents and training harness.** DQN, Double DQN, Dueling Double DQN with prioritized replay and n-step returns, discrete PPO, discrete SAC, policy gradient, GFlowNet (diversity); configuration-driven runs, seeds, checker-call counters, checkpoints, logs. *Accepted when:* each agent trains on a toy context set and reproduces its result for the same seed.
 
@@ -38,7 +38,7 @@ Every step of the project is one patch: one commit, its own tests, its own accep
 
 ### Stage 2: custom welded sections
 
-**P14 Stage 2 amendment, welded-section model and checker.** Dated spec amendment A3 for Stage 2 (plate ranges, fabrication increments, context ranges, splits, success criteria) before any Stage 2 result. Section properties from plate geometry; classification; bending; shear; shear buckling; web bearing; deflection; LTB for welded sections (UK NA NA.2.17 as reproduced in software documentation, not yet read from the NA text: lambda_LT,0 = 0.2 and beta = 1.0; curve c for h/b <= 2 and curve d for 2 < h/b <= 3.1; not specified above 3.1, so the general case 6.3.2.2 or an h/b limit, to be decided and recorded); fabrication increments and bounds. *Accepted when:* unit tests pass and the model reproduces rolled-UB resistances to a stated tolerance when given UB plate dimensions.
+**P14 Stage 2 amendment, welded-section model and checker.** Dated spec amendment A4 for Stage 2 (plate ranges, fabrication increments, context ranges, splits, success criteria) before any Stage 2 result. Section properties from plate geometry; classification; bending; shear; shear buckling; web bearing; deflection; LTB for welded sections (UK NA NA.2.17 as reproduced in software documentation, not yet read from the NA text: lambda_LT,0 = 0.2 and beta = 1.0; curve c for h/b <= 2 and curve d for 2 < h/b <= 3.1; not specified above 3.1, so the general case 6.3.2.2 or an h/b limit, to be decided and recorded); fabrication increments and bounds. *Accepted when:* unit tests pass and the model reproduces rolled-UB resistances to a stated tolerance when given UB plate dimensions.
 
 **P15 Stage 2 verification.** Second implementation, generated cases with hand-check sheets, an independent calculation by an engineer, and an entry in the verification record. *Accepted when:* signed as in P5.
 

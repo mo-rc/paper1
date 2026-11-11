@@ -74,7 +74,7 @@ def test_runstore_metas_are_complete_and_validate(sample_run):
 
 
 def test_horizon_table_flags_never_change_the_horizon(sample_run):
-    assert LD.HORIZON_F1 == 12  # the spec horizon; the script only reports, it never changes it
+    assert LD.HORIZON_F1 == 13  # spec section 9, amended 12 -> 13 by A3 (2026-11-11); the script only reports
     with open(sample_run / "paper" / "tables" / "p9_horizon.csv", newline="", encoding="ascii") as f:
         rows = list(csv.DictReader(f))
     assert "gt12" in rows[0] and "flag" in rows[0] and "share_gt12" in rows[0]

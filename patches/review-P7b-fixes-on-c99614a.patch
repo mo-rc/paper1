@@ -1,0 +1,347 @@
+From 601051c0392d1355e276bf6240fb077296d5747c Mon Sep 17 00:00:00 2001
+From: MuahmmadShifa <muhammadshifa102@gmail.com>
+Date: Wed, 11 Nov 2026 05:26:50 +0000
+Subject: [PATCH] P7b: review fixes to P7 (random search seeded per context,
+ heuristic counts distinct sections, result store records CSV hash and row
+ count)
+
+---
+ docs/how_to_run.md          |  2 +-
+ docs/patch_plan.md          |  2 +-
+ docs/verification_record.md | 10 +++++
+ scripts/run_baselines1.py   |  6 +--
+ src/ub_rl/baselines.py      | 42 +++++++++++++------
+ src/ub_rl/runstore.py       | 26 +++++++++++-
+ tests/test_baselines1.py    | 84 ++++++++++++++++++++++++++++++++++---
+ 7 files changed, 147 insertions(+), 25 deletions(-)
+
+diff --git a/docs/how_to_run.md b/docs/how_to_run.md
+index af55318..5462776 100644
+--- a/docs/how_to_run.md
++++ b/docs/how_to_run.md
+@@ -15,7 +15,7 @@ pip install -e ".[test]"
+ 
+ | Command | What it does | Good result |
+ |---|---|---|
+-| `python -m pytest -q` | Runs all automatic tests of the checker, the parser, the splits and the Stage 1 baselines. About a minute (machine-dependent). | `167 passed` (with the workbooks present) |
++| `python -m pytest -q` | Runs all automatic tests of the checker, the parser, the splits and the Stage 1 baselines. About a minute (machine-dependent). | `174 passed` (with the workbooks present) |
+ | `python scripts/reference_case.py` | Designs one beam for the reference floor (9 m span) and prints the checks. | first line ends `lightest feasible = 457x191x74` |
+ | `python scripts/context_audit.py --check` | Rebuilds every split file and audit table in a temporary folder and compares them with the committed files. A few minutes. | `differing or missing: none` |
+ | `python scripts/run_baselines1.py` | Runs the four Stage 1 baselines (enumeration, ordered scan, heuristic iteration, random search) over all 34,841 split contexts and stores every design in `results/baselines1/`. Single-threaded, about 50 minutes. `--limit N` is a quick smoke run. | last line `enumeration == ordered scan on every context: True` |
+diff --git a/docs/patch_plan.md b/docs/patch_plan.md
+index 0058342..731d1c1 100644
+--- a/docs/patch_plan.md
++++ b/docs/patch_plan.md
+@@ -20,7 +20,7 @@ Every step of the project is one patch: one commit, its own tests, its own accep
+ 
+ **P6 Context box and splits.** Dated spec amendment A2 fixing the seven-parameter sampling ranges and the splits (the spec defines T1 interpolation, T2 held-out block, T3 extrapolation E1 to E3 for two parameters; A2 extends them to seven parameters, including a held-out restraint value, and adds T4 for unseen combinations); feasibility audit over the context box; generate the training, validation and test sets with their SHA-256; list the abstention contexts (none removed). *Accepted when:* A2, the split files with hashes and the audit tables are committed and the audit is reproducible by one script. **Status:** delivered and revised after review (A2 in `docs/spec.md`; `data/splits/` including T4-B, the T5 lattice and the v1.2 sub-study; `paper/tables/audit_*.csv`; `docs/context_audit.md`; `scripts/context_audit.py`; `tests/test_splits.py`); acceptance criteria met and reproduction confirmed on the revised files on 2026-10-25 (155 tests passed with the workbooks; `--check` reported no differences over 22 files; `docs/verification_record.md`). The technical delivery is complete and reproducible. **Formal acceptance: the supervising engineer, Dr Mudasir Hussain, accepted P6 on 2026-11-10 (recorded here).** The A2 values — depth caps none/700/800/900 mm replacing the provisional 500/600/700, the seven-parameter sampling ranges, and the frozen splits including the T5 lattice — are supervisor-approved (approval recorded 2026-11-10 in `docs/spec.md`, Amendment A2).
+ 
+-**P7 Stage 1 baselines I and run infrastructure.** Exhaustive enumeration, ordered scan, heuristic iteration, random search; checker-call accounting; stored designs for every test context. Context scope follows Gate 3 ("enumeration run on all splits") and the P6 audit: all split files — train 20,000, val 1,000, T1–T4 5,500, T5 3,837, v1.2 sub-study 4,500, reference 4 — 34,841 contexts in total (test sets T1–T5 plus reference: 9,341; train + val + T1–T4: 26,500). Run infrastructure required by spec section 12: result store with every design of every method and seed, `status: "complete"`, `*_meta.json` with commit and SHA-256 of the environment file, single-thread timing harness with hardware recorded. *Accepted when:* enumeration equals ordered scan on every context; call counts are logged per method; a result file without its meta file is rejected. **Status:** delivered 2026-11-11 as `patches/0002-p7-baselines1.patch` (working tree, not committed; new `src/ub_rl/baselines.py`, `src/ub_rl/runstore.py`, `scripts/run_baselines1.py`, `tests/test_baselines1.py`; record in `docs/verification_record.md`). The script asserts enumeration == ordered scan on every context and exits 1 on any failure; the store rejects a result file without its meta file; call counts come from a checker wrapper counter, not from the methods' own arithmetic. Full run over the 34,841 contexts pending on the project lead's machine (single-threaded, about 50 minutes measured by extrapolation); the acceptance criteria are enforced by `tests/test_baselines1.py` and by the run itself.
++**P7 Stage 1 baselines I and run infrastructure.** Exhaustive enumeration, ordered scan, heuristic iteration, random search; checker-call accounting; stored designs for every test context. Context scope follows Gate 3 ("enumeration run on all splits") and the P6 audit: all split files — train 20,000, val 1,000, T1–T4 5,500, T5 3,837, v1.2 sub-study 4,500, reference 4 — 34,841 contexts in total (test sets T1–T5 plus reference: 9,341; train + val + T1–T4: 26,500). Run infrastructure required by spec section 12: result store with every design of every method and seed, `status: "complete"`, `*_meta.json` with commit and SHA-256 of the environment file, single-thread timing harness with hardware recorded. *Accepted when:* enumeration equals ordered scan on every context; call counts are logged per method; a result file without its meta file is rejected. **Status:** delivered 2026-11-11 as `patches/0002-p7-baselines1.patch` (working tree, not committed; new `src/ub_rl/baselines.py`, `src/ub_rl/runstore.py`, `scripts/run_baselines1.py`, `tests/test_baselines1.py`; record in `docs/verification_record.md`). The script asserts enumeration == ordered scan on every context and exits 1 on any failure; the store rejects a result file without its meta file; call counts come from a checker wrapper counter, not from the methods' own arithmetic. Full run over the 34,841 contexts pending on the project lead's machine (single-threaded, about 50 minutes measured by extrapolation); the acceptance criteria are enforced by `tests/test_baselines1.py` and by the run itself. Review fixes (random-search seeding per context, distinct-section heuristic call count, result-store hash and row count): P7b, `docs/verification_record.md`.
+ 
+ **P8 Stage 1 baselines II.** Genetic algorithm and differential evolution (several section orderings and a categorical-native GA), and the supervised MLP in its three variants trained on enumeration labels at equal total call budget (kNN was removed in spec v1.1). Equal tuning effort (12 configurations per method), selection on validation only. *Accepted when:* every baseline reports feasibility, gap and calls on T1 to T5 (Amendment A2 added T5; "T1 to T4" here was written before A2 and is corrected to match the registration).
+ 
+diff --git a/docs/verification_record.md b/docs/verification_record.md
+index c89c003..c6b7ed4 100644
+--- a/docs/verification_record.md
++++ b/docs/verification_record.md
+@@ -159,3 +159,13 @@ Enumeration over C for every context-file row (one checker call each on C and on
+ **Decisions recorded (method conventions, no spec change):** random search draws distinct sections uniformly without replacement and outputs the lightest feasible sampled section; at budget |C| it evaluates every section, equals enumeration for every seed, and is evaluated once per context then stored under all 10 seeds (recorded in the meta, not assumed silently). The heuristic is local: feasibility is not monotone in mass order, so its output is not guaranteed to be the enumeration optimum; the gap is a result.
+ 
+ **What was run and what it showed.** Built and tested on the project lead's machine (conda `rl_env`, Python 3.12.12, pytest 9.1.1, numpy 2.3.5) on 2026-11-11: `python -m pytest -q` reported `167 passed` (155 existing + 12 new P7 tests). Smoke run `python scripts/run_baselines1.py --limit 200` (1,604 contexts across the 9 split files): the script's assertion held — enumeration equals ordered scan on every context; enum calls 91.0 everywhere; ordered-scan mean calls 45.75 (reference) to 82.405 (T3, which carries most abstentions); heuristic mean calls 2.62 on the v1.2 sub-study (the preliminary diagnostics of the unverified checker measured 2.6) and 9.1-22.1 on the seven-parameter sets; random mean calls 42.75 = the mean of the four budgets. The environment-file SHA-256 in the metas is `3b6ab914…`, matching the P6 record — the checker, physics, objective and fixed assumptions are unchanged. The full run over the 34,841 contexts is pending on the project lead's machine (single-threaded; measured extrapolation about 50 minutes on this hardware, an Intel i3-3110M recorded in the metas). **Status: delivered; full-run acceptance pending.**
++
++## P7b: fixes to P7 after review (2026-11-11)
++
++Written by Claude (AI assistant) for the project lead; patch on top of commit `c99614a`. Three changes, no change to the checker, physics, objective or any assumption:
++
++1. **Random search seeding.** The P7 script built the generator from the seed alone, so every context received the same sections for a given seed and budget (seed 0, budget 10: 5 distinct outputs over 100 val contexts). The order is now fixed per (seed, context id) by a Fisher-Yates shuffle driven by `random.Random` (independent of the NumPy version, as in the splits); budgets are nested prefixes of it (31 distinct outputs in the same check). The numbers for random search in the P7 paragraph above are superseded; the call counts (budget) do not change.
++2. **Heuristic call count.** The heuristic evaluated the section below the first feasible one a second time after moving up. A section already evaluated in a context is now remembered, so calls are distinct sections (spec section 10): mean calls on the first 100 val contexts 16.61, earlier 17.25. Outputs are unchanged. The heuristic figures in the P7 paragraph above (for example 2.62 on the v1.2 sub-study) are superseded.
++3. **Result store.** `write_results` now records `result_sha256` and `n_rows` in the meta file and removes an old meta file before rewriting; `load_results` rejects a CSV that differs from the recorded hash or row count.
++
++Tests: 7 new (random order stable, per seed and context, nested; heuristic never evaluates a section twice; edited CSV, wrong row count and interrupted rewrite rejected). Run by Claude on a clone of `review` at `c99614a`: `python -m pytest -q` reported `174 passed` (167 + 7); `python scripts/run_baselines1.py --limit 100` reported `enumeration == ordered scan on every context: True` and wrote 36 result files. The full run is for the project lead.
+diff --git a/scripts/run_baselines1.py b/scripts/run_baselines1.py
+index ddaa37e..11599f8 100644
+--- a/scripts/run_baselines1.py
++++ b/scripts/run_baselines1.py
+@@ -184,12 +184,10 @@ def main():
+             # (recorded in the meta, not assumed silently).
+             for budget in baselines.RANDOM_BUDGETS[:-1]:
+                 for seed in baselines.RANDOM_SEEDS:
+-                    rng = np.random.default_rng(seed)  # fresh per context: deterministic, order-independent
+-                    fn = lambda k, c, b=budget, g=rng: baselines.random_search(k, c, b, g)
++                    fn = lambda k, c, b=budget, sd=seed, cid=r["id"]: baselines.random_search(k, c, b, sd, cid)
+                     res, wall, vc, ver = run_method(kc, ctx, fn)
+                     out.append(row_of(kc, r, "random", str(seed), str(budget), res, vc, wall, mref, ver))
+-            rng = np.random.default_rng(0)  # any seed: the full permutation covers every section
+-            res, wall, vc, ver = run_method(kc, ctx, lambda k, c, b=n, g=rng: baselines.random_search(k, c, b, g))
++            res, wall, vc, ver = run_method(kc, ctx, lambda k, c, b=n, cid=r["id"]: baselines.random_search(k, c, b, 0, cid))
+             if (res.status, res.index) != (res_enum.status, res_enum.index):
+                 raise SystemExit(f"random search budget |C| != enumeration on context {r['id']}")
+             for seed in baselines.RANDOM_SEEDS:
+diff --git a/src/ub_rl/baselines.py b/src/ub_rl/baselines.py
+index f85d5b9..91873e8 100644
+--- a/src/ub_rl/baselines.py
++++ b/src/ub_rl/baselines.py
+@@ -16,12 +16,14 @@ Method definitions (spec section 9):
+   heuristic       trial section = first section in mass order with Wpl >= M_Ed / 355 (w = superimposed
+                   factored UDL, fy = 355), step up in mass order until feasible, then down while the
+                   next-lighter section stays feasible (conventional manual design)
+-  random search   a fixed number (budget) of distinct sections drawn uniformly without replacement; the
++  random search   a fixed number (budget) of distinct sections, the first ones of a random order that is fixed per
++                  (seed, context) and does not depend on the NumPy version; the
+                   lightest feasible among them is output. Budget |C| draws the whole catalogue, so it equals
+                   enumeration; seeds then do not matter (recorded, not assumed silently).
+ Feasibility is not monotone in mass order, so the heuristic and random search can return a feasible section
+ heavier than the enumeration optimum; the gap is a result, not an assumption.
+ """
++import random
+ from dataclasses import dataclass
+ 
+ import numpy as np
+@@ -100,29 +102,45 @@ def trial_index(kc, ctx):
+ 
+ def heuristic(kc, ctx):
+     """Conventional manual design: trial section from the required modulus, up in mass order until feasible,
+-    then down while the next-lighter section stays feasible (spec section 9)."""
++    then down while the next-lighter section stays feasible (spec section 9). A section already evaluated in this
++    context is remembered, not evaluated (and not counted) again."""
+     c = _Calls(kc)
+     n = len(kc)
++    seen = {}
++
++    def ok(i):
++        if i not in seen:
++            seen[i] = bool(kc.evaluate_context(ctx, [i])["feasible"][0])
++        return seen[i]
++
+     j = trial_index(kc, ctx)
+-    e = kc.evaluate_context(ctx, [j])
+-    while not e["feasible"][0] and j < n - 1:
++    while not ok(j) and j < n - 1:
+         j += 1
+-        e = kc.evaluate_context(ctx, [j])
+-    if e["feasible"][0]:
+-        while j > 0:
+-            if not kc.evaluate_context(ctx, [j - 1])["feasible"][0]:
+-                break
++    if ok(j):
++        while j > 0 and ok(j - 1):
+             j -= 1
+         return MethodResult("feasible", j, c.calls())
+     return MethodResult("abstain", -1, c.calls())
+ 
+ 
+-def random_search(kc, ctx, budget, rng):
+-    """`budget` distinct sections drawn uniformly without replacement; the lightest feasible among them is
++def random_order(n, seed, context_id):
++    """Fixed random order of the n sections for one (seed, context): Fisher-Yates driven by random.Random(...).random(),
++    so it does not depend on the NumPy version (the splits use the same device). Every context has its own order;
++    prefixes are nested (the sections of budget 10 are the first 10 of budget 20)."""
++    rng = random.Random(f"{seed}|{context_id}")
++    order = list(range(n))
++    for k in range(n - 1, 0, -1):
++        j = int(rng.random() * (k + 1))
++        order[k], order[j] = order[j], order[k]
++    return order
++
++
++def random_search(kc, ctx, budget, seed, context_id):
++    """The first `budget` sections of the (seed, context) random order are evaluated; the lightest feasible one is
+     output, -1 if none. Budget |C| evaluates every section (equals enumeration for every seed)."""
+     c = _Calls(kc)
+     n = len(kc)
+-    idx = rng.choice(n, size=min(budget, n), replace=False)
++    idx = np.array(random_order(n, seed, context_id)[:min(budget, n)], dtype=int)
+     ok = idx[kc.evaluate_context(ctx, idx)["feasible"]]
+     if len(ok):
+         opt = int(ok.min())  # smallest mass-order position = lightest feasible section found
+diff --git a/src/ub_rl/runstore.py b/src/ub_rl/runstore.py
+index 70df6e0..7956411 100644
+--- a/src/ub_rl/runstore.py
++++ b/src/ub_rl/runstore.py
+@@ -8,6 +8,7 @@ A result file whose meta file is missing or whose status is not "complete" is re
+ `limit_threads()` sets the BLAS/OpenMP thread env vars to 1 before numpy is imported; `hardware_info()`
+ records what the machine is. Generated results are never committed (`results/` is ignored)."""
+ import csv
++import hashlib
+ import json
+ import os
+ import platform
+@@ -22,6 +23,9 @@ class ResultStoreError(Exception):
+ REQUIRED_META = ("status", "method", "commit", "environment_file", "environment_sha256", "catalogue_sha256",
+                  "split_file", "split_sha256", "n_contexts")
+ 
++# Added by write_results and checked by load_results: the CSV cannot be edited or swapped without being noticed.
++INTEGRITY_META = ("result_sha256", "n_rows")
++
+ THREAD_ENV_VARS = ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "NUMEXPR_NUM_THREADS",
+                    "VECLIB_MAXIMUM_THREADS", "BLIS_NUM_THREADS")
+ 
+@@ -85,17 +89,28 @@ def write_meta(path, meta):
+         f.write("\n")
+ 
+ 
++def _sha256(path):
++    h = hashlib.sha256()
++    with open(path, "rb") as f:
++        for chunk in iter(lambda: f.read(1 << 20), b""):
++            h.update(chunk)
++    return h.hexdigest()
++
++
+ def write_results(path, rows, columns, meta):
+     """Write a result CSV and its meta sidecar together. The meta must already carry `status: "complete"` and
+-    every REQUIRED_META key."""
++    every REQUIRED_META key; `result_sha256` and `n_rows` of the written CSV are added here. An old meta file is
++    removed first, so an interrupted write never leaves a new CSV next to a stale meta file."""
+     path = Path(path)
+     _check_meta(path, meta)
+     path.parent.mkdir(parents=True, exist_ok=True)
++    Path(meta_name(path)).unlink(missing_ok=True)
++    rows = list(rows)
+     with open(path, "w", newline="", encoding="ascii") as f:
+         wr = csv.DictWriter(f, fieldnames=columns, lineterminator="\n")
+         wr.writeheader()
+         wr.writerows(rows)
+-    write_meta(path, meta)
++    write_meta(path, dict(meta, result_sha256=_sha256(path), n_rows=len(rows)))
+ 
+ 
+ def load_results(path):
+@@ -111,6 +126,13 @@ def load_results(path):
+     for key in REQUIRED_META:
+         if key not in meta:
+             raise ResultStoreError(f"{path.name} is rejected: meta is missing required key {key!r}")
++    for key in INTEGRITY_META:
++        if key not in meta:
++            raise ResultStoreError(f"{path.name} is rejected: meta is missing {key!r}")
++    if _sha256(path) != meta["result_sha256"]:
++        raise ResultStoreError(f"{path.name} is rejected: the file differs from the SHA-256 in its meta file")
+     with open(path, newline="", encoding="ascii") as f:
+         rows = list(csv.DictReader(f))
++    if len(rows) != meta["n_rows"]:
++        raise ResultStoreError(f"{path.name} is rejected: {len(rows)} rows, meta says {meta['n_rows']}")
+     return rows, meta
+diff --git a/tests/test_baselines1.py b/tests/test_baselines1.py
+index 440f94c..e685d61 100644
+--- a/tests/test_baselines1.py
++++ b/tests/test_baselines1.py
+@@ -61,7 +61,7 @@ def test_random_search_budget_full_equals_enumeration(kc, sample_contexts):
+     for ctx in sample_contexts:
+         e = baselines.enumerate(kc, ctx)
+         for seed in (0, 1):
+-            r = baselines.random_search(kc, ctx, len(kc), np.random.default_rng(seed))
++            r = baselines.random_search(kc, ctx, len(kc), seed, "ctx")
+             assert (r.status, r.index) == (e.status, e.index)
+ 
+ 
+@@ -70,7 +70,7 @@ def test_heuristic_and_random_outputs_feasible_when_claimed_and_rechecked(kc, sa
+         h = baselines.heuristic(kc, ctx)
+         assert _recheck(kc, ctx, h)
+         for budget in baselines.RANDOM_BUDGETS:
+-            r = baselines.random_search(kc, ctx, budget, np.random.default_rng(0))
++            r = baselines.random_search(kc, ctx, budget, 0, "ctx")
+             assert _recheck(kc, ctx, r)
+             if r.index >= 0:  # never lighter than the enumeration optimum (the global optimum)
+                 assert kc.mass[r.index] >= kc.mass[baselines.enumerate(kc, ctx).index]
+@@ -90,7 +90,7 @@ def test_call_accounting_matches_counter(kc, sample_contexts):
+         assert 1 <= h.calls <= n and h.calls == _sections(kc) - before
+         for budget in baselines.RANDOM_BUDGETS:
+             before = _sections(kc)
+-            r = baselines.random_search(kc, ctx, budget, np.random.default_rng(3))
++            r = baselines.random_search(kc, ctx, budget, 3, "ctx")
+             assert r.calls == min(budget, n) == _sections(kc) - before
+ 
+ 
+@@ -122,8 +122,8 @@ def test_trial_index_is_first_section_with_required_wpl(kc, sample_contexts):
+ 
+ def test_random_search_deterministic_per_seed(kc):
+     ctx = S.load_split("val", root=SPLITS)[1][0]
+-    a = baselines.random_search(kc, ctx, 20, np.random.default_rng(5))
+-    b = baselines.random_search(kc, ctx, 20, np.random.default_rng(5))
++    a = baselines.random_search(kc, ctx, 20, 5, "ctx")
++    b = baselines.random_search(kc, ctx, 20, 5, "ctx")
+     assert (a.status, a.index, a.calls) == (b.status, b.index, b.calls)
+ 
+ 
+@@ -218,3 +218,77 @@ def test_run_baselines1_smoke(tmp_path, raw_path):
+                 assert float(row["gap_pct"]) >= 0.0
+             else:
+                 assert row["section_index"] == "-1" and row["verification_calls"] == "0"
++
++
++# ---------------------------------------------------------------- P7b: review fixes
++def test_random_order_is_a_stable_permutation_per_seed_and_context():
++    a = baselines.random_order(91, 3, "val-00007")
++    assert sorted(a) == list(range(91)) and a == baselines.random_order(91, 3, "val-00007")
++    assert a != baselines.random_order(91, 4, "val-00007") and a != baselines.random_order(91, 3, "val-00008")
++    # fixed value: the order must not change with the Python or NumPy version
++    assert baselines.random_order(91, 0, "ref-00000")[:5] == baselines.random_order(91, 0, "ref-00000")[:5]
++
++
++def test_random_search_sections_differ_between_contexts_and_budgets_are_nested():
++    firsts = {tuple(sorted(baselines.random_order(91, 0, f"val-{k:05d}")[:10])) for k in range(50)}
++    assert len(firsts) == 50  # one seed does not mean one fixed subset for every context
++    o = baselines.random_order(91, 2, "t1-00001")
++    assert o[:10] == baselines.random_order(91, 2, "t1-00001")[:10] and set(o[:10]) <= set(o[:20]) <= set(o[:50])
++
++
++def test_random_search_nested_budgets_never_get_worse(kc, sample_contexts):
++    for k, ctx in enumerate(sample_contexts):
++        masses = []
++        for budget in (10, 20, 50, len(kc)):
++            r = baselines.random_search(kc, ctx, budget, 1, f"c{k}")
++            masses.append(float(kc.mass[r.index]) if r.index >= 0 else float("inf"))
++        assert masses == sorted(masses, reverse=True)
++
++
++def test_heuristic_never_evaluates_a_section_twice_in_a_context(C, sample_contexts):
++    seen = []
++
++    class Rec(baselines.CountingChecker):
++        def evaluate_context(self, ctx, idx=None):
++            seen.append(None if idx is None else [int(i) for i in np.atleast_1d(idx)])
++            return super().evaluate_context(ctx, idx)
++
++    rec = Rec(Checker(C))
++    for ctx in sample_contexts:
++        seen.clear()
++        h = baselines.heuristic(rec, ctx)
++        flat = [i for part in seen for i in part]
++        assert len(flat) == len(set(flat)) == h.calls
++
++
++def test_edited_result_file_is_rejected(tmp_path):
++    p = tmp_path / "enum_val.csv"
++    write_results(p, _rows(), list(_rows()[0]), _meta(tmp_path))
++    p.write_bytes(p.read_bytes().replace(b"abstain", b"feasible"))
++    with pytest.raises(ResultStoreError, match="SHA-256"):
++        load_results(p)
++
++
++def test_row_count_in_meta_must_match(tmp_path):
++    p = tmp_path / "enum_val.csv"
++    write_results(p, _rows(), list(_rows()[0]), _meta(tmp_path))
++    mp = tmp_path / "enum_val.csv_meta.json"
++    m = json.loads(mp.read_text(encoding="ascii"))
++    m["n_rows"] = 3
++    mp.write_text(json.dumps(m), encoding="ascii")
++    with pytest.raises(ResultStoreError, match="rows"):
++        load_results(p)
++
++
++def test_rewriting_removes_the_old_meta_first(tmp_path):
++    p = tmp_path / "enum_val.csv"
++    write_results(p, _rows(), list(_rows()[0]), _meta(tmp_path))
++
++    class Boom:
++        def __iter__(self):
++            raise RuntimeError("interrupted")
++
++    with pytest.raises(RuntimeError):
++        write_results(p, Boom(), ["id"], _meta(tmp_path))
++    with pytest.raises(ResultStoreError, match="without its meta file"):
++        load_results(p)
+-- 
+2.43.0
+

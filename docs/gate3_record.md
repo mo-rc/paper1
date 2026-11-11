@@ -1,6 +1,6 @@
 # Gate 3 record - P9 landscape and saturation diagnostics
 
-Provenance: `scripts/landscape_diagnostics.py`, commit e3c74630a0819040da49974dbdafadd57903d3dc, clean; environment `src/ub_rl/checker.py` sha256 3b6ab914e350726f...; catalogue workbook sha256 190e17b694bdb27a...; split manifest `data/splits/SHA256SUMS` sha256 51050584ac1d1488...; catalogue C (91 sections); 34841 contexts (full run); heuristic call accounting measured by the checker wrapper. Generated deterministically; `--check` reproduces this record byte for byte.
+Provenance: `scripts/landscape_diagnostics.py`, commit 36e77550c75d3a163329aa6fc431a67f78b7dbea, working tree dirty; environment `src/ub_rl/checker.py` sha256 3b6ab914e350726f...; catalogue workbook sha256 190e17b694bdb27a...; split manifest `data/splits/SHA256SUMS` sha256 51050584ac1d1488...; catalogue C (91 sections); 34841 contexts (full run); heuristic call accounting measured by the checker wrapper. Generated deterministically; `--check` reproduces this record byte for byte.
 
 ## Saturation (headline line: V)
 
@@ -54,19 +54,19 @@ c1: a lighter section is feasible while a heavier one below it is not (any pair;
 
 Monotonicity fails in 23573 contexts (c1); c2_block = 0. The P7 zero gap forces c2_block = 0 in every feasible context (the stretch from the optimum to the walk start has no infeasible section, so the downward walk reaches the optimum); non-monotone dips above the trial cannot be reached by the walk. These counts are the recorded explanation.
 
-## F1 horizon check (spec section 9, horizon 12)
+## F1 horizon check (spec section 9, horizon 13)
 
-Fewest F1 actions from the trial section to the optimum on the actual action graph (mass step up/down, lightest section of the next strictly deeper or shallower series; accept terminates and is not counted; a no-op past either end costs a step but never shortens a path, so it is not an edge). Gate 3 verifies the optimum lies within 12 steps of the trial section on every split.
+Fewest F1 actions from the trial section to the optimum on the actual action graph (mass step up/down, lightest section of the next strictly deeper or shallower series; accept terminates and is not counted; a no-op past either end costs a step but never shortens a path, so it is not an edge). Gate 3 verifies the optimum lies within 12 steps of the trial section on every split; Amendment A3 (2026-11-11) amends the horizon to 13 steps.
 
-| set | n_feasible | max steps | share needing more than 12 |
+| set | n_feasible | max steps | share needing more than 13 |
 |---|---|---|---|
 | train | 16723 | 11 | 0.0000 |
 | val | 796 | 10 | 0.0000 |
 | t1 | 1635 | 11 | 0.0000 |
 | t2 | 388 | 10 | 0.0000 |
-| t3-E1 | 194 | 13 | 0.0206 |
-| t3-E2 | 304 | 13 | 0.0033 |
-| t3-E3 | 111 | 13 | 0.1081 |
+| t3-E1 | 194 | 13 | 0.0000 |
+| t3-E2 | 304 | 13 | 0.0000 |
+| t3-E3 | 111 | 13 | 0.0000 |
 | t4-A | 934 | 11 | 0.0000 |
 | t4-B | 470 | 8 | 0.0000 |
 | t5 | 3102 | 11 | 0.0000 |
@@ -78,13 +78,7 @@ Fewest F1 actions from the trial section to the optimum on the actual action gra
 | s12-E3 | 500 | 5 | 0.0000 |
 | ref | 4 | 6 | 0.0000 |
 
-**APPROVAL NEEDED - the F1 horizon of 12 is NOT confirmed.** The sets below need more than 12 steps; the horizon was not changed, per instruction:
-
-- t3-E1: 4 of 194 feasible contexts need more than 12 steps
-
-- t3-E2: 1 of 304 feasible contexts need more than 12 steps
-
-- t3-E3: 12 of 111 feasible contexts need more than 12 steps
+The F1 horizon of 13 is confirmed: on every split, every feasible context's optimum is reachable from the trial section in at most 13 F1 actions.
 
 ## Governing check at the optimum
 
@@ -134,23 +128,23 @@ Checker.check at each context's optimum with the context's config applied (the c
 
 ## Reward ordering on V (float64 log-space)
 
-The assertion: for every validation context and every family, the smallest return over all feasible candidates exceeds the largest return over all infeasible candidates, in float64 log-space, with a margin at or above the analytic bound (R1/R2/R-C 0.988, R3 10, R-D 0.5). A candidate is a (section, calls 0..12) pair; contexts with no feasible or no infeasible candidate are vacuous and counted, not failed.
+The assertion: for every validation context and every family, the smallest return over all feasible candidates exceeds the largest return over all infeasible candidates, in float64 log-space, with a margin at or above the analytic bound (R1/R2/R-C 0.987, R3 10, R-D 0.500). A candidate is a (section, calls 0..13) pair; contexts with no feasible or no infeasible candidate are vacuous and counted, not failed.
 
 | key | family | beta | n | non-vacuous | vacuous | min margin | bound | violations | pass |
 |---|---|---|---|---|---|---|---|---|---|
-| R1 | R1 |  | 1000 | 796 | 204 | 0.988 | 0.988 | 0 | 1 |
-| R2 | R2 |  | 1000 | 796 | 204 | 0.9879999999999995 | 0.988 | 0 | 1 |
+| R1 | R1 |  | 1000 | 796 | 204 | 0.9870000000000001 | 0.987 | 0 | 1 |
+| R2 | R2 |  | 1000 | 796 | 204 | 0.9870000000000001 | 0.987 | 0 | 1 |
 | R3-b25 | R3 | 25 | 1000 | 796 | 204 | 10.0 | 10.0 | 0 | 1 |
 | R3-b50 | R3 | 50 | 1000 | 796 | 204 | 10.0 | 10.0 | 0 | 1 |
 | R3-b100 | R3 | 100 | 1000 | 796 | 204 | 10.0 | 10.0 | 0 | 1 |
-| R-C | R-C |  | 1000 | 796 | 204 | 0.988 | 0.988 | 0 | 1 |
+| R-C | R-C |  | 1000 | 796 | 204 | 0.9870000000000001 | 0.987 | 0 | 1 |
 | R-D | R-D |  | 1000 | 796 | 204 | 0.5 | 0.5 | 0 | 1 |
 
 The assertion holds: zero violations on every validation context and every family, margins at or above the analytic bounds.
 
 ## What the paper can claim
 
-- The F1 horizon precondition is NOT confirmed; the paper must record the flagged sets and the amendment decision before training.
+- Gate 3's F1 precondition holds: on every split the optimum lies within 13 F1 steps of the trial section (spec section 9; A3 amended 12 -> 13).
 
 - Monotonicity fails in 23573 contexts; c2_block = 0 is the recorded explanation of why the P7 zero gap still holds.
 

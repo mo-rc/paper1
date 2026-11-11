@@ -1,0 +1,816 @@
+diff --git a/README.md b/README.md
+index ac15622..928b5f1 100644
+--- a/README.md
++++ b/README.md
+@@ -30,3 +30,14 @@ Context ranges and splits: `docs/spec.md`, Amendment A2. Files and hashes: `data
+ python scripts/context_audit.py            # writes splits, tables, docs/context_audit.md, results/audit/
+ python scripts/context_audit.py --check    # regenerates in a temporary folder and compares with the committed files
+ ```
++
++## Stage 1 baselines (P7)
++
++The four baselines of `docs/spec.md` section 9 — enumeration, ordered scan, heuristic iteration, random search (seeds 0-9, budgets 10/20/50/|C|) — with checker-call accounting and the result store of spec section 12 (`src/ub_rl/baselines.py`, `src/ub_rl/runstore.py`):
++
++```
++python scripts/run_baselines1.py            # all 34,841 split contexts, about 50 minutes, single-threaded
++python scripts/run_baselines1.py --limit 200   # quick smoke run
++```
++
++Results go to `results/baselines1/` (git-ignored): one CSV per method and split file, each with a `*_meta.json` (commit, environment-file SHA-256, hardware). The run asserts enumeration == ordered scan on every context, rechecks every output design and rejects a result file without its meta file.
+diff --git a/docs/how_to_run.md b/docs/how_to_run.md
+index ccf43c6..af55318 100644
+--- a/docs/how_to_run.md
++++ b/docs/how_to_run.md
+@@ -15,9 +15,10 @@ pip install -e ".[test]"
+ 
+ | Command | What it does | Good result |
+ |---|---|---|
+-| `python -m pytest -q` | Runs all automatic tests of the checker, the parser and the splits. About 15 seconds. | `155 passed` (with the workbooks present) |
++| `python -m pytest -q` | Runs all automatic tests of the checker, the parser, the splits and the Stage 1 baselines. About a minute (machine-dependent). | `167 passed` (with the workbooks present) |
+ | `python scripts/reference_case.py` | Designs one beam for the reference floor (9 m span) and prints the checks. | first line ends `lightest feasible = 457x191x74` |
+ | `python scripts/context_audit.py --check` | Rebuilds every split file and audit table in a temporary folder and compares them with the committed files. A few minutes. | `differing or missing: none` |
++| `python scripts/run_baselines1.py` | Runs the four Stage 1 baselines (enumeration, ordered scan, heuristic iteration, random search) over all 34,841 split contexts and stores every design in `results/baselines1/`. Single-threaded, about 50 minutes. `--limit N` is a quick smoke run. | last line `enumeration == ordered scan on every context: True` |
+ 
+ If `pytest` reports many `skipped`, the workbooks are not in `data/raw/`.
+ 
+@@ -38,7 +39,7 @@ Each line is one beam section. `bend 0.998` means the bending check uses 99.8 %
+ | `docs/context_audit.md` | Short readable summary of the audit. |
+ | `docs/spec.md` | The fixed study plan (the pre-registration), with dated amendments A1 and A2. |
+ | `docs/patch_plan.md` | The list of work steps (patches) and what comes next. |
+-| `results/` | Output of runs. Git ignores it; each result file has a `*_meta.json` recording the code version. |
++| `results/` | Output of runs. Git ignores it; each result file has a `*_meta.json` recording the code version, the environment-file SHA-256 and the hardware. `results/baselines1/` holds the P7 baseline results. |
+ 
+ ## 5. Things to know
+ 
+diff --git a/docs/patch_plan.md b/docs/patch_plan.md
+index 71cb7da..0058342 100644
+--- a/docs/patch_plan.md
++++ b/docs/patch_plan.md
+@@ -20,7 +20,7 @@ Every step of the project is one patch: one commit, its own tests, its own accep
+ 
+ **P6 Context box and splits.** Dated spec amendment A2 fixing the seven-parameter sampling ranges and the splits (the spec defines T1 interpolation, T2 held-out block, T3 extrapolation E1 to E3 for two parameters; A2 extends them to seven parameters, including a held-out restraint value, and adds T4 for unseen combinations); feasibility audit over the context box; generate the training, validation and test sets with their SHA-256; list the abstention contexts (none removed). *Accepted when:* A2, the split files with hashes and the audit tables are committed and the audit is reproducible by one script. **Status:** delivered and revised after review (A2 in `docs/spec.md`; `data/splits/` including T4-B, the T5 lattice and the v1.2 sub-study; `paper/tables/audit_*.csv`; `docs/context_audit.md`; `scripts/context_audit.py`; `tests/test_splits.py`); acceptance criteria met and reproduction confirmed on the revised files on 2026-10-25 (155 tests passed with the workbooks; `--check` reported no differences over 22 files; `docs/verification_record.md`). The technical delivery is complete and reproducible. **Formal acceptance: the supervising engineer, Dr Mudasir Hussain, accepted P6 on 2026-11-10 (recorded here).** The A2 values — depth caps none/700/800/900 mm replacing the provisional 500/600/700, the seven-parameter sampling ranges, and the frozen splits including the T5 lattice — are supervisor-approved (approval recorded 2026-11-10 in `docs/spec.md`, Amendment A2).
+ 
+-**P7 Stage 1 baselines I and run infrastructure.** Exhaustive enumeration, ordered scan, heuristic iteration, random search; checker-call accounting; stored designs for every test context. Context scope follows Gate 3 ("enumeration run on all splits") and the P6 audit: all split files — train 20,000, val 1,000, T1–T4 5,500, T5 3,837, v1.2 sub-study 4,500, reference 4 — 34,841 contexts in total (test sets T1–T5 plus reference: 9,341; train + val + T1–T4: 26,500). Run infrastructure required by spec section 12: result store with every design of every method and seed, `status: "complete"`, `*_meta.json` with commit and SHA-256 of the environment file, single-thread timing harness with hardware recorded. *Accepted when:* enumeration equals ordered scan on every context; call counts are logged per method; a result file without its meta file is rejected.
++**P7 Stage 1 baselines I and run infrastructure.** Exhaustive enumeration, ordered scan, heuristic iteration, random search; checker-call accounting; stored designs for every test context. Context scope follows Gate 3 ("enumeration run on all splits") and the P6 audit: all split files — train 20,000, val 1,000, T1–T4 5,500, T5 3,837, v1.2 sub-study 4,500, reference 4 — 34,841 contexts in total (test sets T1–T5 plus reference: 9,341; train + val + T1–T4: 26,500). Run infrastructure required by spec section 12: result store with every design of every method and seed, `status: "complete"`, `*_meta.json` with commit and SHA-256 of the environment file, single-thread timing harness with hardware recorded. *Accepted when:* enumeration equals ordered scan on every context; call counts are logged per method; a result file without its meta file is rejected. **Status:** delivered 2026-11-11 as `patches/0002-p7-baselines1.patch` (working tree, not committed; new `src/ub_rl/baselines.py`, `src/ub_rl/runstore.py`, `scripts/run_baselines1.py`, `tests/test_baselines1.py`; record in `docs/verification_record.md`). The script asserts enumeration == ordered scan on every context and exits 1 on any failure; the store rejects a result file without its meta file; call counts come from a checker wrapper counter, not from the methods' own arithmetic. Full run over the 34,841 contexts pending on the project lead's machine (single-threaded, about 50 minutes measured by extrapolation); the acceptance criteria are enforced by `tests/test_baselines1.py` and by the run itself.
+ 
+ **P8 Stage 1 baselines II.** Genetic algorithm and differential evolution (several section orderings and a categorical-native GA), and the supervised MLP in its three variants trained on enumeration labels at equal total call budget (kNN was removed in spec v1.1). Equal tuning effort (12 configurations per method), selection on validation only. *Accepted when:* every baseline reports feasibility, gap and calls on T1 to T5 (Amendment A2 added T5; "T1 to T4" here was written before A2 and is corrected to match the registration).
+ 
+diff --git a/docs/verification_record.md b/docs/verification_record.md
+index ba5c64f..c89c003 100644
+--- a/docs/verification_record.md
++++ b/docs/verification_record.md
+@@ -151,3 +151,11 @@ Status at 2026-10-19 (superseded; Gate 2 accepted 23 October 2026, see Gate 2 st
+ Run by Claude (AI assistant) for the project lead in the project session of 2026-10-24 to 2026-10-25; the first version of the audit files was superseded on 2026-10-25 after review (A2, revision note). Reproduction on the project lead's machine: `python scripts/context_audit.py --check` reported `checked 21 files; differing or missing: none` (reported by the project lead on 2026-10-25, for the first version). Repeated for the revised files (commit `09a7ec0`, after P6b to P6d): on the project lead's machine (Python 3.12.12, pytest 9.1.1, workbooks present) `python -m pytest tests/` reported `155 passed` and `python scripts/context_audit.py --check` reported `checked 22 files; differing or missing: none` (reported by the project lead on 2026-10-25). The catalogue workbook SHA-256, the checker SHA-256 and the splits SHA-256 are in `docs/context_audit.md`.
+ 
+ Enumeration over C for every context-file row (one checker call each on C and on C+) by `scripts/context_audit.py`; tables `paper/tables/audit_*.csv`, summary `docs/context_audit.md`. The reference optima at restraint ratios 0, 0.25, 0.5 and 1 reproduce the optima recorded above (457x191x74, 533x210x82, 610x229x101, 686x254x140). The checker, config and context code are unchanged. Tests: `tests/test_splits.py`.
++
++## P7: Stage 1 baselines I and run infrastructure (2026-11-11)
++
++**What was built** (new: `src/ub_rl/baselines.py`, `src/ub_rl/runstore.py`, `scripts/run_baselines1.py`, `tests/test_baselines1.py`): the four Stage 1 baselines of spec section 9 — enumeration (exact reference), ordered scan (mass order, stop at the first feasible section, exact), heuristic iteration (trial section = first section in mass order with Wpl >= M_Ed/355 from the superimposed factored UDL w, up in mass order until feasible, then down while the next-lighter section stays feasible) and random search (budgets 10, 20, 50, |C|, seeds 0-9). Call accounting: the cost unit is checker calls = section evaluations (a vectorised evaluation of k sections counts as k calls); a `CountingChecker` wrapper measures the calls each method actually makes and the reported number is read from the counter, never computed by the method itself. Every output design is rechecked with a fresh checker call (1 verification call for a feasible output, 0 for abstention; stored in `verification_calls`, not added to the search `calls`, spec section 9 end-to-end). Result store (spec section 12): one CSV per method and split file under `results/baselines1/` with `*_meta.json` carrying `status: "complete"`, the commit, the SHA-256 of the environment file (`src/ub_rl/checker.py`, unchanged), catalogue and split SHA-256, the checker config, the hardware and the single-thread limits; a result file without its meta file is rejected on load. Wall time is measured per design with the BLAS threads pinned to 1 before numpy is imported (spec section 10). The run script asserts on the run itself: enumeration == ordered scan on every context, random search at budget |C| == enumeration, every output rechecked, every split file matches `data/splits/SHA256SUMS` before anything is evaluated, and every written file reloads through the store.
++
++**Decisions recorded (method conventions, no spec change):** random search draws distinct sections uniformly without replacement and outputs the lightest feasible sampled section; at budget |C| it evaluates every section, equals enumeration for every seed, and is evaluated once per context then stored under all 10 seeds (recorded in the meta, not assumed silently). The heuristic is local: feasibility is not monotone in mass order, so its output is not guaranteed to be the enumeration optimum; the gap is a result.
++
++**What was run and what it showed.** Built and tested on the project lead's machine (conda `rl_env`, Python 3.12.12, pytest 9.1.1, numpy 2.3.5) on 2026-11-11: `python -m pytest -q` reported `167 passed` (155 existing + 12 new P7 tests). Smoke run `python scripts/run_baselines1.py --limit 200` (1,604 contexts across the 9 split files): the script's assertion held — enumeration equals ordered scan on every context; enum calls 91.0 everywhere; ordered-scan mean calls 45.75 (reference) to 82.405 (T3, which carries most abstentions); heuristic mean calls 2.62 on the v1.2 sub-study (the preliminary diagnostics of the unverified checker measured 2.6) and 9.1-22.1 on the seven-parameter sets; random mean calls 42.75 = the mean of the four budgets. The environment-file SHA-256 in the metas is `3b6ab914…`, matching the P6 record — the checker, physics, objective and fixed assumptions are unchanged. The full run over the 34,841 contexts is pending on the project lead's machine (single-threaded; measured extrapolation about 50 minutes on this hardware, an Intel i3-3110M recorded in the metas). **Status: delivered; full-run acceptance pending.**
+diff --git a/scripts/run_baselines1.py b/scripts/run_baselines1.py
+new file mode 100644
+index 0000000..ddaa37e
+--- /dev/null
++++ b/scripts/run_baselines1.py
+@@ -0,0 +1,253 @@
++"""P7: run the Stage 1 baselines (enumeration, ordered scan, heuristic iteration, random search) over every
++split context and store every design of every method and seed (spec section 12).
++
++Usage, from the repository root:
++    python scripts/run_baselines1.py [workbook.xlsx]           full run: all 34,841 contexts of all split files
++    python scripts/run_baselines1.py [workbook.xlsx] --limit N  first N contexts per file (smoke run; the
++                                                                acceptance assertions then cover that subset)
++    --out DIR                                                  write results to DIR instead of results/baselines1
++
++Writes `results/baselines1/<method>_<file>.csv` with a `*_meta.json` each (commit, environment-file SHA-256,
++catalogue and split SHA-256, checker config, hardware, single-thread limits), plus `run_summary.json` and its
++meta. `results/` is ignored by git; generated results are not committed.
++
++The run asserts the P7 acceptance criteria itself and exits 1 on any failure:
++  - enumeration equals ordered scan on every context run;
++  - random search at budget |C| equals enumeration on every context run;
++  - every output design is rechecked with a fresh checker call (spec section 9 end-to-end: verify, 1 call);
++  - every written result file reloads through the store (a result file without its meta file is rejected);
++  - the committed split files match `data/splits/SHA256SUMS` before anything is evaluated.
++
++Deterministic except the wall-clock timings and timestamps. No RL is run; the checker is the environment file
++until the environments exist (P10). Single-thread: `runstore.limit_threads()` runs before numpy is imported."""
++import os
++import sys
++
++sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))  # use the repository src/
++from ub_rl.runstore import hardware_info, limit_threads, load_results, write_meta, write_results  # noqa: E402
++
++limit_threads()  # before numpy is imported: spec section 10, single CPU thread
++
++import json  # noqa: E402
++import platform  # noqa: E402
++import subprocess  # noqa: E402
++import time  # noqa: E402
++from datetime import datetime, timezone  # noqa: E402
++from pathlib import Path  # noqa: E402
++
++import numpy as np  # noqa: E402
++
++from ub_rl import baselines  # noqa: E402
++from ub_rl import splits as S  # noqa: E402
++from ub_rl.catalogue import parse_workbook, sha256_file  # noqa: E402
++from ub_rl.checker import Checker  # noqa: E402
++
++DEFAULT_WORKBOOK = "data/raw/UB-secpropsdimsprops-EC3UKNA-UK-10-16-2026.xlsx"
++SPLIT_FILES = ["train", "val", "test_t1", "test_t2", "test_t3", "test_t4", "test_t5", "v12_substudy", "reference"]
++METHODS = ("enumeration", "ordered_scan", "heuristic", "random")
++ENV_FILE = "src/ub_rl/checker.py"
++HASHED_FILES = ["src/ub_rl/checker.py", "src/ub_rl/context.py", "src/ub_rl/config.py", "src/ub_rl/splits.py",
++                "src/ub_rl/catalogue.py", "src/ub_rl/baselines.py", "src/ub_rl/runstore.py",
++                "scripts/run_baselines1.py"]
++COLUMNS = ["id", "set", "method", "seed", "budget", "status", "section_index", "section_name", "mass_kg_m",
++           "gap_pct", "calls", "verification_calls", "wall_seconds", "verified"]
++
++
++def git_info():
++    try:
++        commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
++        dirty = bool(subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=no"], text=True).strip())
++    except Exception:
++        commit, dirty = "unknown", None
++    return commit, dirty
++
++
++def check_split_manifest():
++    lines = Path("data/splits/SHA256SUMS").read_text(encoding="ascii").strip().splitlines()
++    manifest = {name: h for h, name in (line.split("  ") for line in lines)}
++    bad = [name for name in SPLIT_FILES if sha256_file(Path("data/splits") / f"{name}.csv") != manifest[f"{name}.csv"]]
++    if bad:
++        raise SystemExit(f"split files do not match data/splits/SHA256SUMS: {bad}")
++    return manifest
++
++
++def row_of(kc, r, method, seed, budget, res, calls_verify, wall, mref, verified):
++    mass = "" if res.index < 0 else f"{float(kc.mass[res.index]):.1f}"
++    gap = ""
++    if res.index >= 0:
++        gap = 0.0 if mref is None or res.index == mref else 100.0 * (kc.mass[res.index] / kc.mass[mref] - 1.0)
++        gap = f"{gap:.6f}"
++    return {
++        "id": r["id"], "set": r["set"], "method": method, "seed": seed, "budget": budget, "status": res.status,
++        "section_index": res.index, "section_name": "" if res.index < 0 else kc.cat.names[res.index],
++        "mass_kg_m": mass, "gap_pct": gap, "calls": res.calls, "verification_calls": calls_verify,
++        "wall_seconds": f"{wall:.6f}", "verified": verified,
++    }
++
++
++def run_method(kc, ctx, fn):
++    """Run fn, recheck its output design with a fresh checker call (1 verification call when a design is
++    output, 0 on abstain), and time the whole per-design pipeline."""
++    t = time.perf_counter()
++    res = fn(kc, ctx)
++    if res.index >= 0:
++        ok = bool(kc.evaluate_context(ctx, [res.index])["feasible"][0])
++        if ok != (res.status == "feasible"):
++            raise RuntimeError(f"recheck failed: {res}")
++    wall = time.perf_counter() - t
++    return res, wall, (1 if res.index >= 0 else 0), ("" if res.index < 0 else 1)
++
++
++def base_meta(method, split_name, n, commit, dirty, hashes, started, catalogue_sha, hardware, threads, limit,
++              n_feasible, n_abstain, enum_equals_scan, elapsed, kc):
++    if split_name is None:  # run summary: the split reference is the whole manifest
++        split_file, split_sha = "data/splits/SHA256SUMS (all split files)", sha256_file("data/splits/SHA256SUMS")
++    else:
++        split_file, split_sha = f"data/splits/{split_name}.csv", sha256_file(Path("data/splits") / f"{split_name}.csv")
++    return {
++        "status": "complete",
++        "method": method,
++        "script": "scripts/run_baselines1.py",
++        "commit": commit, "working_tree_dirty": dirty,
++        "environment_file": ENV_FILE, "environment_sha256": hashes[ENV_FILE], "file_sha256": hashes,
++        "catalogue_sha256": catalogue_sha, "catalogue_set": "C", "catalogue_rows": len(kc),
++        "catalogue_order": "mass ascending, ties by smaller depth, then catalogue order (spec section 9)",
++        "split_file": split_file,
++        "split_sha256": split_sha,
++        "n_contexts": n, "n_feasible": n_feasible, "n_abstain": n_abstain,
++        "checker_config": kc.cfg.as_dict(),
++        "python": platform.python_version(), "numpy": np.__version__,
++        "hardware": hardware, "threads_limited_to": threads,
++        "limit": limit, "enum_equals_ordered_scan": enum_equals_scan,
++        "started_utc": started, "elapsed_seconds": elapsed,
++        "n_checker_invocations": kc.invocations, "n_section_evaluations": kc.sections,
++    }
++
++
++def main():
++    argv, args = sys.argv[1:], []
++    for i, a in enumerate(argv):
++        if a.startswith("--"):
++            if a in ("--limit", "--out") and i + 1 >= len(argv):
++                raise SystemExit(f"{a} needs a value")
++            continue
++        if argv[i - 1] in ("--limit", "--out"):
++            continue
++        args.append(a)
++    workbook = args[0] if args else DEFAULT_WORKBOOK
++    limit = None
++    if "--limit" in argv:
++        limit = int(argv[argv.index("--limit") + 1])
++        if limit < 1:
++            raise SystemExit("--limit must be at least 1")
++
++    check_split_manifest()
++    cat, _ = parse_workbook(workbook)
++    C = cat.mass_ordered(False)
++    kc = baselines.CountingChecker(Checker(C))
++    n = len(kc)
++    commit, dirty = git_info()
++    started = datetime.now(timezone.utc).isoformat()
++    hashes = {p: sha256_file(p) for p in HASHED_FILES}
++    hardware = hardware_info()
++    threads = {v: os.environ.get(v) for v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS")}
++    if "--out" in argv:
++        if argv.index("--out") + 1 >= len(argv):
++            raise SystemExit("--out needs a value")
++        outdir = Path(argv[argv.index("--out") + 1])
++    else:
++        outdir = Path("results/baselines1")
++    outdir.mkdir(parents=True, exist_ok=True)
++    t0 = time.perf_counter()
++
++    summary_files = []
++    expected_rows = {}  # file -> method -> number of rows, and the context count per file (store self-check)
++    expected_ctxs = {}
++    for split_name in SPLIT_FILES:
++        rows, ctxs = S.load_split(split_name)
++        if limit is not None:
++            rows, ctxs = rows[:limit], ctxs[:limit]
++        expected_ctxs[split_name] = len(rows)
++        out = []
++        for r, ctx in zip(rows, ctxs):
++            res_enum, wall_enum, vc_enum, ver_enum = run_method(kc, ctx, baselines.enumerate)
++            res_scan, wall_scan, vc_scan, ver_scan = run_method(kc, ctx, baselines.ordered_scan)
++            res_heur, wall_heur, vc_heur, ver_heur = run_method(kc, ctx, baselines.heuristic)
++            if (res_enum.status, res_enum.index) != (res_scan.status, res_scan.index):
++                raise SystemExit(f"enumeration != ordered scan on context {r['id']}: {res_enum} vs {res_scan}")
++            mref = res_enum.index
++            out.append(row_of(kc, r, "enumeration", "", "", res_enum, vc_enum, wall_enum, mref, ver_enum))
++            out.append(row_of(kc, r, "ordered_scan", "", "", res_scan, vc_scan, wall_scan, mref, ver_scan))
++            out.append(row_of(kc, r, "heuristic", "", "", res_heur, vc_heur, wall_heur, mref, ver_heur))
++            # random search: seeds 0-9, budgets 10/20/50. Budget |C| samples every section without replacement,
++            # so it equals enumeration for every seed: evaluated once per context and stored under all seeds
++            # (recorded in the meta, not assumed silently).
++            for budget in baselines.RANDOM_BUDGETS[:-1]:
++                for seed in baselines.RANDOM_SEEDS:
++                    rng = np.random.default_rng(seed)  # fresh per context: deterministic, order-independent
++                    fn = lambda k, c, b=budget, g=rng: baselines.random_search(k, c, b, g)
++                    res, wall, vc, ver = run_method(kc, ctx, fn)
++                    out.append(row_of(kc, r, "random", str(seed), str(budget), res, vc, wall, mref, ver))
++            rng = np.random.default_rng(0)  # any seed: the full permutation covers every section
++            res, wall, vc, ver = run_method(kc, ctx, lambda k, c, b=n, g=rng: baselines.random_search(k, c, b, g))
++            if (res.status, res.index) != (res_enum.status, res_enum.index):
++                raise SystemExit(f"random search budget |C| != enumeration on context {r['id']}")
++            for seed in baselines.RANDOM_SEEDS:
++                out.append(row_of(kc, r, "random", str(seed), str(n), res, vc, wall, mref, ver))
++
++        feas = sum(1 for x in out if x["method"] == "enumeration" and x["status"] == "feasible")
++        per_file = {"file": split_name, "n": len(rows), "n_feasible": feas, "n_abstain": len(rows) - feas,
++                    "enum_equals_ordered_scan": True,
++                    "mean_calls": {m: round(float(np.mean([int(x["calls"]) for x in out if x["method"] == m])), 3)
++                                   for m in METHODS}}
++        summary_files.append(per_file)
++        for method in METHODS:
++            mrows = [x for x in out if x["method"] == method]
++            expected_rows.setdefault(split_name, {})[method] = len(mrows)
++            meta = base_meta(method, split_name, len(rows), commit, dirty, hashes, started, sha256_file(workbook),
++                             hardware, threads, limit, feas, len(rows) - feas, True, time.perf_counter() - t0, kc)
++            if method == "random":
++                meta["seeds"] = list(baselines.RANDOM_SEEDS)
++                meta["budgets"] = list(baselines.RANDOM_BUDGETS)
++                meta["random_budget_C_note"] = ("budget |C| samples every section without replacement, so the "
++                                                "stored rows are seed-independent (evaluated once per context)")
++            write_results(outdir / f"{method}_{split_name}.csv", mrows, COLUMNS, meta)
++        print(f"{split_name}: {len(rows)} contexts, {feas} feasible, {len(rows) - feas} abstain; mean calls: "
++              f"enum {per_file['mean_calls']['enumeration']}, scan {per_file['mean_calls']['ordered_scan']}, "
++              f"heuristic {per_file['mean_calls']['heuristic']}, random {per_file['mean_calls']['random']}")
++
++    # store self-check: every written file must reload through the store (spec section 12: a result file
++    # without its meta file is rejected); the meta must report the same context count as the file holds
++    for split_name in SPLIT_FILES:
++        for method in METHODS:
++            rows_loaded, meta_loaded = load_results(outdir / f"{method}_{split_name}.csv")
++            assert meta_loaded["status"] == "complete"
++            assert len(rows_loaded) == expected_rows[split_name][method]
++            assert int(meta_loaded["n_contexts"]) == expected_ctxs[split_name]
++
++    summary = {
++        "script": "scripts/run_baselines1.py", "commit": commit, "working_tree_dirty": dirty,
++        "environment_file": ENV_FILE, "environment_sha256": hashes[ENV_FILE],
++        "catalogue_sha256": sha256_file(workbook), "catalogue_set": "C", "catalogue_rows": n,
++        "limit": limit, "files": summary_files,
++        "n_contexts_total": sum(f["n"] for f in summary_files),
++        "enum_equals_ordered_scan_overall": all(f["enum_equals_ordered_scan"] for f in summary_files),
++        "started_utc": started, "elapsed_seconds": time.perf_counter() - t0,
++        "python": platform.python_version(), "numpy": np.__version__, "hardware": hardware,
++        "random_seeds": list(baselines.RANDOM_SEEDS), "random_budgets": list(baselines.RANDOM_BUDGETS),
++        "random_budget_C_note": "budget |C| samples every section without replacement and equals enumeration",
++    }
++    sfile = outdir / "run_summary.json"
++    sfile.write_text(json.dumps(summary, indent=2) + "\n", encoding="ascii", newline="\n")
++    write_meta(sfile, base_meta("summary", None, summary["n_contexts_total"], commit, dirty, hashes,
++                                started, sha256_file(workbook), hardware, threads, limit,
++                                sum(f["n_feasible"] for f in summary_files),
++                                sum(f["n_abstain"] for f in summary_files),
++                                summary["enum_equals_ordered_scan_overall"], time.perf_counter() - t0, kc))
++    print(f"total contexts: {summary['n_contexts_total']}; enumeration == ordered scan on every context: "
++          f"{summary['enum_equals_ordered_scan_overall']}; wrote {len(METHODS) * len(SPLIT_FILES)} result files "
++          f"+ metas + run_summary.json to {outdir}/")
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/src/ub_rl/baselines.py b/src/ub_rl/baselines.py
+new file mode 100644
+index 0000000..f85d5b9
+--- /dev/null
++++ b/src/ub_rl/baselines.py
+@@ -0,0 +1,130 @@
++"""Stage 1 baselines I (patch P7): enumeration, ordered scan, heuristic iteration, random search.
++
++All methods share the verified checker over the mass-ordered catalogue C, the same contexts and the same
++objective (spec section 7: minimum mass, ties by smaller depth, then catalogue order). All return a section
++index into C or -1 (abstain).
++
++Cost accounting (spec section 10): one checker call is one section evaluation. A vectorised evaluation of k
++sections therefore counts as k calls; the CountingChecker wrapper measures the calls actually made, and every
++method reports that measured number (its own arithmetic is never trusted). Per spec section 9, the end-to-end
++procedure adds one verification call when a design is output and none when the method abstains; that call is
++reported separately and is not part of the search calls.
++
++Method definitions (spec section 9):
++  enumeration     every section of C evaluated; the lightest feasible section is the exact reference optimum
++  ordered scan    sections evaluated in mass order; the first feasible section is the optimum (exact)
++  heuristic       trial section = first section in mass order with Wpl >= M_Ed / 355 (w = superimposed
++                  factored UDL, fy = 355), step up in mass order until feasible, then down while the
++                  next-lighter section stays feasible (conventional manual design)
++  random search   a fixed number (budget) of distinct sections drawn uniformly without replacement; the
++                  lightest feasible among them is output. Budget |C| draws the whole catalogue, so it equals
++                  enumeration; seeds then do not matter (recorded, not assumed silently).
++Feasibility is not monotone in mass order, so the heuristic and random search can return a feasible section
++heavier than the enumeration optimum; the gap is a result, not an assumption.
++"""
++from dataclasses import dataclass
++
++import numpy as np
++
++RANDOM_BUDGETS = (10, 20, 50, 91)  # spec section 9: evaluation budgets 10, 20, 50, |C|
++RANDOM_SEEDS = tuple(range(10))  # spec section 9: seeds 0-9
++TRIAL_FY = 355.0  # N/mm2, spec section 9: the F1 trial section uses w and fy = 355
++
++
++@dataclass(frozen=True)
++class MethodResult:
++    status: str  # "feasible" or "abstain"
++    index: int  # position in the mass-ordered catalogue C, -1 if abstain
++    calls: int  # checker calls (section evaluations) made by the search
++
++
++class CountingChecker:
++    """Wraps a Checker and counts checker calls (section evaluations) per context evaluation. Attribute
++    lookups delegate to the wrapped checker."""
++
++    def __init__(self, checker):
++        self._checker = checker
++        self.invocations = 0  # evaluate_context calls
++        self.sections = 0  # section evaluations (the cost unit of spec section 10)
++
++    def evaluate_context(self, ctx, idx=None):
++        self.invocations += 1
++        self.sections += len(self) if idx is None else len(np.atleast_1d(np.asarray(idx, dtype=int)))
++        return self._checker.evaluate_context(ctx, idx)
++
++    def __len__(self):
++        return self._checker.n
++
++    def __getattr__(self, name):
++        return getattr(self._checker, name)
++
++
++class _Calls:
++    """Reads the calls made since construction from a CountingChecker (the counter is the source of truth)."""
++
++    def __init__(self, kc):
++        self.kc = kc
++        self.start = kc.sections
++
++    def calls(self):
++        return self.kc.sections - self.start
++
++
++def enumerate(kc, ctx):
++    """Exact reference: lightest feasible section of C, -1 if none (spec section 7 optimum)."""
++    c = _Calls(kc)
++    e = kc.evaluate_context(ctx)
++    opt = int(np.argmax(e["feasible"])) if e["feasible"].any() else -1
++    return MethodResult("feasible" if opt >= 0 else "abstain", opt, c.calls())
++
++
++def ordered_scan(kc, ctx):
++    """Sections in mass order, one evaluation each, stop at the first feasible section (exact: the first
++    feasible section is the lightest). Abstains after the whole catalogue."""
++    c = _Calls(kc)
++    for i in range(len(kc)):
++        if kc.evaluate_context(ctx, [i])["feasible"][0]:
++            return MethodResult("feasible", i, c.calls())
++    return MethodResult("abstain", -1, c.calls())
++
++
++def trial_index(kc, ctx):
++    """First section in mass order with Wpl >= M_Ed / fy, using the superimposed factored UDL w and fy = 355
++    (spec section 9, F1 trial section). The heaviest section is the fallback when nothing is strong enough."""
++    w, _ = ctx.factored_udl()  # kN/m, self-weight excluded
++    need = (w * ctx.span ** 2 / 8.0) * 1e6 / TRIAL_FY  # N mm / (N/mm2) = mm3
++    W = kc.Wpl  # mm3, in mass order
++    i = int(np.argmax(W >= need))
++    return i if W[i] >= need else len(kc) - 1
++
++
++def heuristic(kc, ctx):
++    """Conventional manual design: trial section from the required modulus, up in mass order until feasible,
++    then down while the next-lighter section stays feasible (spec section 9)."""
++    c = _Calls(kc)
++    n = len(kc)
++    j = trial_index(kc, ctx)
++    e = kc.evaluate_context(ctx, [j])
++    while not e["feasible"][0] and j < n - 1:
++        j += 1
++        e = kc.evaluate_context(ctx, [j])
++    if e["feasible"][0]:
++        while j > 0:
++            if not kc.evaluate_context(ctx, [j - 1])["feasible"][0]:
++                break
++            j -= 1
++        return MethodResult("feasible", j, c.calls())
++    return MethodResult("abstain", -1, c.calls())
++
++
++def random_search(kc, ctx, budget, rng):
++    """`budget` distinct sections drawn uniformly without replacement; the lightest feasible among them is
++    output, -1 if none. Budget |C| evaluates every section (equals enumeration for every seed)."""
++    c = _Calls(kc)
++    n = len(kc)
++    idx = rng.choice(n, size=min(budget, n), replace=False)
++    ok = idx[kc.evaluate_context(ctx, idx)["feasible"]]
++    if len(ok):
++        opt = int(ok.min())  # smallest mass-order position = lightest feasible section found
++        return MethodResult("feasible", opt, c.calls())
++    return MethodResult("abstain", -1, c.calls())
+diff --git a/src/ub_rl/runstore.py b/src/ub_rl/runstore.py
+new file mode 100644
+index 0000000..70df6e0
+--- /dev/null
++++ b/src/ub_rl/runstore.py
+@@ -0,0 +1,116 @@
++"""P7 run infrastructure (spec section 12): result store and single-thread timing harness.
++
++Every result file is a CSV with a sidecar `*_meta.json` (the CSV name plus `_meta.json`). The meta carries
++`status: "complete"`, the commit, the SHA-256 of the environment file (`src/ub_rl/checker.py` until the
++environments exist, P10), the catalogue and split SHA-256, the hardware and the single-thread limits.
++A result file whose meta file is missing or whose status is not "complete" is rejected when loaded.
++
++`limit_threads()` sets the BLAS/OpenMP thread env vars to 1 before numpy is imported; `hardware_info()`
++records what the machine is. Generated results are never committed (`results/` is ignored)."""
++import csv
++import json
++import os
++import platform
++import sys
++from pathlib import Path
++
++
++class ResultStoreError(Exception):
++    pass
++
++
++REQUIRED_META = ("status", "method", "commit", "environment_file", "environment_sha256", "catalogue_sha256",
++                 "split_file", "split_sha256", "n_contexts")
++
++THREAD_ENV_VARS = ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "NUMEXPR_NUM_THREADS",
++                   "VECLIB_MAXIMUM_THREADS", "BLIS_NUM_THREADS")
++
++
++def limit_threads(n=1):
++    """Pin the linear-algebra thread count to n. Call before importing numpy (spec section 10: search and
++    inference run on a single CPU thread)."""
++    for name in THREAD_ENV_VARS:
++        os.environ.setdefault(name, str(n))
++    return {name: os.environ.get(name) for name in THREAD_ENV_VARS}
++
++
++def hardware_info():
++    """One dict describing the machine, for the `*_meta.json` files. Read-only, no imports of numpy."""
++    cpu_model = platform.processor() or ""
++    if sys.platform.startswith("linux"):
++        try:
++            with open("/proc/cpuinfo") as f:
++                for line in f:
++                    if line.startswith("model name"):
++                        cpu_model = line.split(":", 1)[1].strip()
++                        break
++        except OSError:
++            pass
++    memory_gb = ""
++    try:
++        page, pages = os.sysconf("SC_PAGE_SIZE"), os.sysconf("SC_PHYS_PAGES")
++        memory_gb = round(page * pages / 1e9, 1)
++    except (ValueError, OSError):
++        pass
++    return {
++        "platform": platform.platform(),
++        "system": platform.system(),
++        "machine": platform.machine(),
++        "processor": platform.processor() or "",
++        "cpu_model": cpu_model,
++        "cpu_count": os.cpu_count(),
++        "memory_gb": memory_gb,
++        "python": platform.python_version(),
++    }
++
++
++def meta_name(path):
++    return str(path) + "_meta.json"
++
++
++def _check_meta(path, meta):
++    for key in REQUIRED_META:
++        if key not in meta:
++            raise ResultStoreError(f"meta for {Path(path).name} is missing required key {key!r}")
++    if meta.get("status") != "complete":
++        raise ResultStoreError(f"refusing to write {Path(path).name}: status is {meta['status']!r}, not 'complete'")
++
++
++def write_meta(path, meta):
++    """Write a meta sidecar alone (used for non-CSV result files such as run summaries)."""
++    _check_meta(path, meta)
++    Path(path).parent.mkdir(parents=True, exist_ok=True)
++    with open(meta_name(path), "w", encoding="ascii", newline="\n") as f:
++        json.dump(meta, f, indent=2)
++        f.write("\n")
++
++
++def write_results(path, rows, columns, meta):
++    """Write a result CSV and its meta sidecar together. The meta must already carry `status: "complete"` and
++    every REQUIRED_META key."""
++    path = Path(path)
++    _check_meta(path, meta)
++    path.parent.mkdir(parents=True, exist_ok=True)
++    with open(path, "w", newline="", encoding="ascii") as f:
++        wr = csv.DictWriter(f, fieldnames=columns, lineterminator="\n")
++        wr.writeheader()
++        wr.writerows(rows)
++    write_meta(path, meta)
++
++
++def load_results(path):
++    """(rows, meta) of a stored result. A result file without its meta file is rejected; so is a meta whose
++    status is not "complete" or that misses a required key (spec section 12)."""
++    path = Path(path)
++    mp = Path(meta_name(path))
++    if not mp.exists():
++        raise ResultStoreError(f"{path.name} without its meta file {mp.name} is rejected")
++    meta = json.loads(mp.read_text(encoding="ascii"))
++    if meta.get("status") != "complete":
++        raise ResultStoreError(f"{path.name} is rejected: meta status is {meta.get('status')!r}, not 'complete'")
++    for key in REQUIRED_META:
++        if key not in meta:
++            raise ResultStoreError(f"{path.name} is rejected: meta is missing required key {key!r}")
++    with open(path, newline="", encoding="ascii") as f:
++        rows = list(csv.DictReader(f))
++    return rows, meta
+diff --git a/tests/test_baselines1.py b/tests/test_baselines1.py
+new file mode 100644
+index 0000000..440f94c
+--- /dev/null
++++ b/tests/test_baselines1.py
+@@ -0,0 +1,220 @@
++"""P7: Stage 1 baselines (enumeration, ordered scan, heuristic iteration, random search), checker-call
++accounting and the result store (spec section 12). Acceptance criteria: enumeration equals ordered scan;
++call counts are logged per method; a result file without its meta file is rejected. Skips without the
++workbook; samples the split files so the suite stays fast (the full run is scripts/run_baselines1.py)."""
++import json
++import subprocess
++import sys
++from pathlib import Path
++
++import numpy as np
++import pytest
++
++from ub_rl import baselines
++from ub_rl import splits as S
++from ub_rl.checker import Checker
++from ub_rl.runstore import (REQUIRED_META, ResultStoreError, hardware_info, limit_threads, load_results,
++                            write_results)
++
++ROOT = Path(__file__).resolve().parent.parent
++SPLITS = ROOT / "data" / "splits"
++FILES = ["train", "val", "test_t1", "test_t2", "test_t3", "test_t4", "test_t5", "v12_substudy", "reference"]
++N_SAMPLE = 10  # first N contexts per file, plus every reference context
++
++
++@pytest.fixture(scope="module")
++def kc(C):
++    return baselines.CountingChecker(Checker(C))
++
++
++@pytest.fixture(scope="module")
++def sample_contexts():
++    out = []
++    for name in FILES:
++        _, ctxs = S.load_split(name, root=SPLITS)
++        out.extend(ctxs[:N_SAMPLE])
++    return out
++
++
++def _sections(kc):
++    return kc.sections
++
++
++def _recheck(kc, ctx, res):
++    """Fresh checker call on the output design, as the run script does (spec section 9: verify, 1 call)."""
++    if res.index < 0:
++        return True
++    return bool(kc.evaluate_context(ctx, [res.index])["feasible"][0]) == (res.status == "feasible")
++
++
++# ---------------------------------------------------------------- the four methods
++def test_enumeration_equals_ordered_scan_on_sample_contexts(kc, sample_contexts):
++    for ctx in sample_contexts:
++        e = baselines.enumerate(kc, ctx)
++        s = baselines.ordered_scan(kc, ctx)
++        assert (e.status, e.index) == (s.status, s.index)
++        # independent route: the checker's own lightest-feasible lookup
++        assert s.index == kc.lightest_feasible_context(ctx)
++
++
++def test_random_search_budget_full_equals_enumeration(kc, sample_contexts):
++    for ctx in sample_contexts:
++        e = baselines.enumerate(kc, ctx)
++        for seed in (0, 1):
++            r = baselines.random_search(kc, ctx, len(kc), np.random.default_rng(seed))
++            assert (r.status, r.index) == (e.status, e.index)
++
++
++def test_heuristic_and_random_outputs_feasible_when_claimed_and_rechecked(kc, sample_contexts):
++    for ctx in sample_contexts:
++        h = baselines.heuristic(kc, ctx)
++        assert _recheck(kc, ctx, h)
++        for budget in baselines.RANDOM_BUDGETS:
++            r = baselines.random_search(kc, ctx, budget, np.random.default_rng(0))
++            assert _recheck(kc, ctx, r)
++            if r.index >= 0:  # never lighter than the enumeration optimum (the global optimum)
++                assert kc.mass[r.index] >= kc.mass[baselines.enumerate(kc, ctx).index]
++
++
++def test_call_accounting_matches_counter(kc, sample_contexts):
++    n = len(kc)
++    for ctx in sample_contexts:
++        before = _sections(kc)
++        e = baselines.enumerate(kc, ctx)
++        assert e.calls == n == _sections(kc) - before  # all |C| sections evaluated
++        before = _sections(kc)
++        s = baselines.ordered_scan(kc, ctx)
++        assert s.calls == (s.index + 1 if s.index >= 0 else n) == _sections(kc) - before
++        before = _sections(kc)
++        h = baselines.heuristic(kc, ctx)
++        assert 1 <= h.calls <= n and h.calls == _sections(kc) - before
++        for budget in baselines.RANDOM_BUDGETS:
++            before = _sections(kc)
++            r = baselines.random_search(kc, ctx, budget, np.random.default_rng(3))
++            assert r.calls == min(budget, n) == _sections(kc) - before
++
++
++def test_counting_checker_counts_sections_and_delegates(kc, C):
++    ctx = S.row_to_context(S.load_split("reference", root=SPLITS)[0][0])
++    assert len(kc) == len(C)
++    before = _sections(kc)
++    kc.evaluate_context(ctx)  # whole catalogue
++    assert _sections(kc) - before == len(C)
++    before = _sections(kc)
++    kc.evaluate_context(ctx, [7])
++    kc.evaluate_context(ctx, np.array([1, 2, 3]))
++    assert _sections(kc) - before == 4
++    assert kc.mass is not None and kc.Wpl.shape == (len(C),) and kc.cat.names[0]  # attribute delegation
++
++
++def test_trial_index_is_first_section_with_required_wpl(kc, sample_contexts):
++    need_355 = baselines.TRIAL_FY
++    for ctx in sample_contexts:
++        w, _ = ctx.factored_udl()
++        need = (w * ctx.span ** 2 / 8.0) * 1e6 / need_355
++        t = baselines.trial_index(kc, ctx)
++        W = kc.Wpl
++        if W[t] >= need:
++            assert t == 0 or W[t - 1] < need  # first section in mass order with Wpl >= M_Ed / 355
++        else:
++            assert t == len(kc) - 1  # fallback: the heaviest section
++
++
++def test_random_search_deterministic_per_seed(kc):
++    ctx = S.load_split("val", root=SPLITS)[1][0]
++    a = baselines.random_search(kc, ctx, 20, np.random.default_rng(5))
++    b = baselines.random_search(kc, ctx, 20, np.random.default_rng(5))
++    assert (a.status, a.index, a.calls) == (b.status, b.index, b.calls)
++
++
++# ---------------------------------------------------------------- the result store
++def _meta(tmp_path, **over):
++    m = {"status": "complete", "method": "enumeration", "commit": "abc1234", "environment_file": "src/ub_rl/checker.py",
++         "environment_sha256": "e" * 64, "catalogue_sha256": "c" * 64, "split_file": "data/splits/val.csv",
++         "split_sha256": "s" * 64, "n_contexts": 2}
++    m.update(over)
++    return m
++
++
++def _rows():
++    return [{"id": "val-00000", "method": "enumeration", "status": "feasible", "calls": "91"},
++            {"id": "val-00001", "method": "enumeration", "status": "abstain", "calls": "91"}]
++
++
++def test_runstore_roundtrip(tmp_path):
++    p = tmp_path / "enum_val.csv"
++    write_results(p, _rows(), list(_rows()[0]), _meta(tmp_path))
++    rows, meta = load_results(p)
++    assert rows == _rows() and meta["status"] == "complete" and meta["environment_sha256"] == "e" * 64
++
++
++def test_result_file_without_meta_is_rejected(tmp_path):
++    p = tmp_path / "enum_val.csv"
++    write_results(p, _rows(), list(_rows()[0]), _meta(tmp_path))
++    (tmp_path / "enum_val.csv_meta.json").unlink()
++    with pytest.raises(ResultStoreError, match="without its meta file"):
++        load_results(p)
++
++
++def test_meta_must_be_complete_and_carry_required_keys(tmp_path):
++    p = tmp_path / "enum_val.csv"
++    with pytest.raises(ResultStoreError, match="not 'complete'"):
++        write_results(p, _rows(), list(_rows()[0]), _meta(tmp_path, status="running"))
++    with pytest.raises(ResultStoreError, match="missing required key"):
++        write_results(p, _rows(), list(_rows()[0]), {k: v for k, v in _meta(tmp_path).items() if k != "commit"})
++    assert set(REQUIRED_META) == {"status", "method", "commit", "environment_file", "environment_sha256",
++                                  "catalogue_sha256", "split_file", "split_sha256", "n_contexts"}
++    # a meta written with status "complete" but edited afterwards is rejected at load time too
++    write_results(p, _rows(), list(_rows()[0]), _meta(tmp_path))
++    mp = tmp_path / "enum_val.csv_meta.json"
++    mp.write_text(json.dumps({**_meta(tmp_path), "status": "running"}), encoding="ascii")
++    with pytest.raises(ResultStoreError, match="not 'complete'"):
++        load_results(p)
++
++
++def test_hardware_info_and_single_thread_limits():
++    hw = hardware_info()
++    for key in ("platform", "system", "machine", "cpu_model", "cpu_count", "python"):
++        assert hw[key] not in (None, "")
++    threads = limit_threads()
++    assert all(v == "1" for v in threads.values())
++
++
++# ---------------------------------------------------------------- the run script, end to end
++def test_run_baselines1_smoke(tmp_path, raw_path):
++    """Run the real script on a small limit: acceptance assertions inside the script, files and metas written,
++    enumeration == ordered scan in the stored files, and the store reloads them."""
++    out = tmp_path / "b1"
++    script = ROOT / "scripts" / "run_baselines1.py"
++    proc = subprocess.run([sys.executable, str(script), str(raw_path), "--limit", "3", "--out", str(out)],
++                          capture_output=True, text=True, cwd=ROOT)
++    assert proc.returncode == 0, proc.stdout + proc.stderr
++    assert "enumeration == ordered scan on every context: True" in proc.stdout
++
++    summary = json.loads((out / "run_summary.json").read_text(encoding="ascii"))
++    assert summary["status" if "status" in summary else "n_contexts_total"]  # runs to completion
++    assert summary["enum_equals_ordered_scan_overall"] is True
++    assert sum(f["n"] for f in summary["files"]) == summary["n_contexts_total"]
++
++    for name in FILES:
++        enum_rows, enum_meta = load_results(out / f"enumeration_{name}.csv")
++        scan_rows, scan_meta = load_results(out / f"ordered_scan_{name}.csv")
++        assert len(enum_rows) == len(scan_rows) == min(3, len(S.load_split(name, root=SPLITS)[0]))
++        assert enum_meta["environment_sha256"] == S.sha256_file(ROOT / "src/ub_rl/checker.py")
++        assert scan_meta["status"] == "complete" and "hardware" in scan_meta and "cpu_model" in scan_meta["hardware"]
++        for a, b in zip(enum_rows, scan_rows):
++            assert (a["status"], a["section_index"]) == (b["status"], b["section_index"])
++        h_rows, _ = load_results(out / f"heuristic_{name}.csv")
++        r_rows, r_meta = load_results(out / f"random_{name}.csv")
++        assert len(h_rows) == len(enum_rows)
++        assert len(r_rows) == len(enum_rows) * len(baselines.RANDOM_SEEDS) * len(baselines.RANDOM_BUDGETS)
++        assert r_meta["seeds"] == list(baselines.RANDOM_SEEDS) and r_meta["budgets"] == list(baselines.RANDOM_BUDGETS)
++        # call counts are logged per method: every row carries its measured calls and wall time
++        for row in enum_rows + scan_rows + h_rows + r_rows:
++            assert int(row["calls"]) >= 1
++            assert float(row["wall_seconds"]) >= 0.0
++            if row["status"] == "feasible":
++                assert int(row["verification_calls"]) == 1 and row["verified"] == "1"
++                assert float(row["gap_pct"]) >= 0.0
++            else:
++                assert row["section_index"] == "-1" and row["verification_calls"] == "0"

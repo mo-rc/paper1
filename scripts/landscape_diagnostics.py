@@ -30,7 +30,8 @@ objective or the splits):
                         shallower series; accept terminates and is not counted; a no-op past either
                         end costs a step but never shortens a path, so it is not an edge). The script
                         reports the distribution and the share of contexts needing more than
-                        HORIZON_F1 = 12 steps (spec section 9). It never changes the horizon: an
+                        HORIZON_F1 = 13 steps (spec section 9, amended 12 -> 13 by A3 2026-11-11). It
+                        never changes the horizon: an
                         excess is recorded and flagged for approval, per instruction.
   governing check       Checker.check at the optimum with the context's config applied: the checker's
                         own tie-break, not a reimplementation
@@ -353,7 +354,7 @@ def build(root, workbook, limit=None, out_results=None):
 
     render_gate3(troot / "docs" / "gate3_record.md", summary, hashes, commit, dirty, limit)
     if horizon_excess:
-        print("APPROVAL NEEDED: the optimum lies more than 12 F1 steps from the trial section in:",
+        print(f"APPROVAL NEEDED: the optimum lies more than {HORIZON_F1} F1 steps from the trial section in:",
               horizon_excess, file=sys.stderr)
         print("The horizon was NOT changed; HORIZON_F1 stays 12. Flag recorded in p9_horizon.csv and the gate record.",
               file=sys.stderr)
@@ -428,16 +429,17 @@ def render_gate3(path, summary, hashes, commit, dirty, limit):
               "Fewest F1 actions from the trial section to the optimum on the actual action graph (mass step "
               "up/down, lightest section of the next strictly deeper or shallower series; accept terminates and "
               "is not counted; a no-op past either end costs a step but never shortens a path, so it is not an "
-              "edge). Gate 3 verifies the optimum lies within 12 steps of the trial section on every split.", "",
-              md_table(["set", "n_feasible", "max steps", "share needing more than 12"],
+              "edge). Gate 3 verifies the optimum lies within 12 steps of the trial section on every split; "
+              f"Amendment A3 (2026-11-11) amends the horizon to {HORIZON_F1} steps.", "",
+              md_table(["set", "n_feasible", "max steps", f"share needing more than {HORIZON_F1}"],
                        [{"set": r["set"], "n_feasible": r["n_feasible"], "max steps": r["max_d"],
-                         "share needing more than 12": r["share_gt12"]} for r in summary["horizon_rows"]]), ""]
+                         f"share needing more than {HORIZON_F1}": r["share_gt12"]} for r in summary["horizon_rows"]]), ""]
     if summary["horizon_confirmed"]:
         lines += [f"The F1 horizon of {HORIZON_F1} is confirmed: on every split, every feasible context's optimum "
                   f"is reachable from the trial section in at most {HORIZON_F1} F1 actions.", ""]
     else:
-        lines += ["**APPROVAL NEEDED - the F1 horizon of 12 is NOT confirmed.** The sets below need more than 12 "
-                  "steps; the horizon was not changed, per instruction:", ""]
+        lines += [f"**APPROVAL NEEDED - the F1 horizon of {HORIZON_F1} is NOT confirmed.** The sets below need more than "
+                  f"{HORIZON_F1} steps; the horizon was not changed, per instruction:", ""]
         for s, n, nf in summary["horizon_excess"]:
             lines += [f"- {s}: {n} of {nf} feasible contexts need more than {HORIZON_F1} steps", ""]
     lines += ["## Governing check at the optimum", "",
@@ -454,9 +456,10 @@ def render_gate3(path, summary, hashes, commit, dirty, limit):
     lines += ["## Reward ordering on V (float64 log-space)", "",
               "The assertion: for every validation context and every family, the smallest return over all feasible "
               "candidates exceeds the largest return over all infeasible candidates, in float64 log-space, with a "
-              "margin at or above the analytic bound (R1/R2/R-C 0.988, R3 10, R-D 0.5). A candidate is a "
-              "(section, calls 0..12) pair; contexts with no feasible or no infeasible candidate are vacuous and "
-              "counted, not failed.", "",
+              f"margin at or above the analytic bound (R1/R2/R-C {RC.margin_bound('R1'):.3f}, R3 10, "
+              f"R-D {RC.margin_bound('R-D'):.3f}). A candidate is a "
+              f"(section, calls 0..{HORIZON_F1}) pair; contexts with no feasible or no infeasible candidate are "
+              "vacuous and counted, not failed.", "",
               md_table(["key", "family", "beta", "n", "non-vacuous", "vacuous", "min margin", "bound", "violations", "pass"],
                        [{"key": r["key"], "family": r["family"], "beta": r["beta"], "n": r["n"],
                          "non-vacuous": r["n_nonvacuous"],
@@ -470,8 +473,8 @@ def render_gate3(path, summary, hashes, commit, dirty, limit):
         lines += ["**The assertion FAILED** - see the violations column; the families are not ordered on V.", ""]
     lines += ["## What the paper can claim", ""]
     if summary["horizon_confirmed"]:
-        lines += ["- Gate 3's F1 precondition holds: on every split the optimum lies within 12 F1 steps of the "
-                  "trial section (spec section 9), so the horizon needs no amendment.", ""]
+        lines += [f"- Gate 3's F1 precondition holds: on every split the optimum lies within {HORIZON_F1} F1 steps of the "
+                  f"trial section (spec section 9; A3 amended 12 -> {HORIZON_F1}).", ""]
     else:
         lines += ["- The F1 horizon precondition is NOT confirmed; the paper must record the flagged sets and the "
                   "amendment decision before training.", ""]

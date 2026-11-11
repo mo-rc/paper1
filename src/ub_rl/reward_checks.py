@@ -18,7 +18,7 @@ Ordering property asserted (spec section 9 "A check asserts ...", Gate 3 of sect
 validation context and every family, the smallest return over all feasible candidates exceeds the
 largest return over all infeasible candidates (strictly, in float64). A candidate is a
 (section, calls used) pair with calls in [0, N_MAX] (the spec's own worst case: "with at most 12
-steps the total step cost is at most 0.012"); R3 candidates carry no step cost. A context with no
+steps the total step cost is at most 0.012", amended by A3 to at most 13 steps and 0.013); R3 candidates carry no step cost. A context with no
 feasible candidate or no infeasible candidate makes the assertion vacuous and is counted, not
 failed. This module needs enumeration feasibility only: no training, no RL. The constants (beta,
 kappa, N_MAX) are frozen at Gate 4; here the family property is asserted over their admissible
@@ -29,9 +29,9 @@ import numpy as np
 from .baselines import trial_index
 
 REWARD_FAMILIES = ("R1", "R2", "R3", "R-C", "R-D")
-N_MAX = 12                # F1 horizon in steps (spec section 9): the maximum calls per episode
+N_MAX = 13                # F1 horizon in steps (spec section 9, amended 12 -> 13 by A3, 2026-11-11)
 STEP_COST_R1 = 0.001      # R1 step cost per step (spec section 9)
-KAPPA_RD = 0.5 / N_MAX    # R-D boundary of its admissible range kappa*N_max <= 0.5 (spec change 5)
+KAPPA_RD = 0.5 / N_MAX    # R-D boundary of its admissible range kappa*N_max <= 0.5 (spec change 5); = 0.5 exactly at N_MAX
 R3_BETAS = (25, 50, 100)  # R3 inverse temperatures, selected on V (spec section 9)
 
 

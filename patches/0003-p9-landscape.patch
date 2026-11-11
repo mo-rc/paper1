@@ -1,0 +1,1227 @@
+diff --git a/docs/how_to_run.md b/docs/how_to_run.md
+index f56707a..1c0a7ed 100644
+--- a/docs/how_to_run.md
++++ b/docs/how_to_run.md
+@@ -20,6 +20,8 @@ pip install -e ".[test]"
+ | `python scripts/context_audit.py --check` | Rebuilds every split file and audit table in a temporary folder and compares them with the committed files. A few minutes. | `differing or missing: none` |
+ | `python scripts/run_baselines1.py` | Runs the four Stage 1 baselines (enumeration, ordered scan, heuristic iteration, random search) over all 34,841 split contexts and stores every design in `results/baselines1/`. Single-threaded, about 50 minutes. `--limit N` is a quick smoke run. | last line `enumeration == ordered scan on every context: True` |
+ | `python scripts/baselines1_summary.py` | Prints, for every set, how often the heuristic and each random-search budget reach the optimum, wrongly abstain, and their mean gap (reads `results/baselines1/`). A few seconds. | 45 lines; random search at budget 91 always shows mean gap 0.000% and 0 false abstentions |
++| `python scripts/landscape_diagnostics.py` | Runs the P9 landscape and saturation diagnostics over all 34,841 contexts: monotonicity counter, F1 horizon check, governing checks, alternatives, the saturation table (V headline) and the reward-ordering assertion on V; writes `paper/tables/p9_*.csv`, `docs/gate3_record.md` and `results/p9/`. Single-threaded, about 2 minutes. `--limit N` is a quick sample that writes nothing committed. | exit 0; `docs/gate3_record.md` states the saturation outcome per set |
++| `python scripts/landscape_diagnostics.py --check` | Rebuilds every P9 table and the Gate 3 record in a temporary folder and compares them with the committed files. About 4 minutes. | `identical (7 files)` |
+ 
+ If `pytest` reports many `skipped`, the workbooks are not in `data/raw/`.
+ 
+diff --git a/docs/patch_plan.md b/docs/patch_plan.md
+index 635e0ed..d5e9611 100644
+--- a/docs/patch_plan.md
++++ b/docs/patch_plan.md
+@@ -24,7 +24,7 @@ Every step of the project is one patch: one commit, its own tests, its own accep
+ 
+ **P8 Stage 1 baselines II.** Genetic algorithm and differential evolution (several section orderings and a categorical-native GA), and the supervised MLP in its three variants trained on enumeration labels at equal total call budget (kNN was removed in spec v1.1). Equal tuning effort (12 configurations per method), selection on validation only. *Accepted when:* every baseline reports feasibility, gap and calls on T1 to T5 (Amendment A2 added T5; "T1 to T4" here was written before A2 and is corrected to match the registration).
+ 
+-**P9 Landscape and saturation diagnostics, Gate 3 acceptance.** Landscape diagnostics (distinct optima, governing checks, alternatives, section-order monotonicity) including the monotonicity counter: count the contexts in which a lighter section is feasible while a heavier one below it is not, and the contexts with an infeasible section between the optimum and the heuristic's trial section (one vectorised enumeration pass per context, from the feasibility the landscape diagnostics already compute). If the first count is zero, feasibility is monotone in mass order and the heuristic equals the ordered scan structurally, which is how the paper explains the P7 zero gap. If it is not zero, the second count is the explanation to record: sampled evidence (P7 record) shows the feasible sections form a contiguous block from the optimum up to the trial and every non-monotone dip sits above the trial, so the heuristic's downward walk reaches the optimum structurally. The saturation rule (heuristic iteration or the classifier at exact match >= 0.99 and feasibility 1.0 on the validation set); the reward-ordering assertion for every family (R1, R2, R3, R-C, R-D) on every validation context with float64 log-space checks (spec section 12 lists it under Gate 3; it needs enumeration data, not training); the Gate 3 record. Freezing is not done here: the spec freezes test files, budgets and the primary family at Gate 4 (P12). *Accepted when:* diagnostics are reproducible by one script and the Gate 3 record states the saturation outcome per context set.
++**P9 Landscape and saturation diagnostics, Gate 3 acceptance.** Landscape diagnostics (distinct optima, governing checks, alternatives, section-order monotonicity) including the monotonicity counter: count the contexts in which a lighter section is feasible while a heavier one below it is not, and the contexts with an infeasible section between the optimum and the heuristic's trial section (one vectorised enumeration pass per context, from the feasibility the landscape diagnostics already compute). If the first count is zero, feasibility is monotone in mass order and the heuristic equals the ordered scan structurally, which is how the paper explains the P7 zero gap. If it is not zero, the second count is the explanation to record: sampled evidence (P7 record) shows the feasible sections form a contiguous block from the optimum up to the trial and every non-monotone dip sits above the trial, so the heuristic's downward walk reaches the optimum structurally. The saturation rule (heuristic iteration or the classifier at exact match >= 0.99 and feasibility 1.0 on the validation set); the reward-ordering assertion for every family (R1, R2, R3, R-C, R-D) on every validation context with float64 log-space checks (spec section 12 lists it under Gate 3; it needs enumeration data, not training); the Gate 3 record. Freezing is not done here: the spec freezes test files, budgets and the primary family at Gate 4 (P12). *Accepted when:* diagnostics are reproducible by one script and the Gate 3 record states the saturation outcome per context set. **Status:** delivered 2026-11-11 (`src/ub_rl/reward_checks.py` and its 9 tests, `src/ub_rl/landscape.py` and its 10 tests — monotonicity counter c1/c2/c2_block, the F1 action-graph distances, per-context diagnostics with `Checker.check` at the optimum — and `scripts/landscape_diagnostics.py` with its 6 smoke tests; full suite 200 passed). The 100-context sample (`--limit 12`, 3.96 s wall, single-threaded) shows c2 = c2_block = 0 in every sampled context (c1 in 58 of 100, so feasibility is genuinely non-monotone), the F1 distance never exceeds 9 on the sample, the saturation rule is MET on the sampled V (exact 1.0000, no false abstention, no infeasible output) and the reward-ordering assertion passes on the sampled V for every family; the sample writes nothing committed and skips the P7 snapshot assertion by design (recorded in the metas). The full run (`python scripts/landscape_diagnostics.py`, expected about 2 minutes from the 1.81 ms/context sample) writes the committed tables and `docs/gate3_record.md`, asserts the P7 snapshot per file, and flags for approval any context needing more than 12 F1 steps without changing the horizon; it is for the project lead and not yet recorded.
+ 
+ ### Gate 4: Stage 1 learning
+ 
+diff --git a/docs/verification_record.md b/docs/verification_record.md
+index 291b68c..7aa503e 100644
+--- a/docs/verification_record.md
++++ b/docs/verification_record.md
+@@ -197,3 +197,15 @@ Run by the project lead (machine in `results/baselines1/*_meta.json`) on `review
+ **Meaning for the project.** On catalogue C with these contexts the conventional heuristic leaves no quality gap, so a learned selector cannot improve on it in mass or feasibility; any benefit has to be in checker calls or in behaviour outside what the heuristic covers. This is a Stage 1 result. It changes no physics, objective or assumption; how it is reported and what it implies for the comparison is the saturation analysis of P9.
+ 
+ **Why the zero gap (sampled check, 2026-11-11).** Review asked why the heuristic shows gap 0 although feasibility is not monotone in mass order. Claude ran the cheap monotonicity counter on a sample — val (1,000), reference (4) and the first 2,000 train contexts, 2,486 feasible in total: the reviewer's pattern (a lighter section feasible while a heavier one below it is not) occurs in 676 of 796 feasible val contexts (2,010 adjacent edges) and in 1,428 of 1,686 train contexts (4,294 edges; reference has none), so feasibility is genuinely non-monotone. But no sampled context has an infeasible section between the optimum and the heuristic's trial section: the feasible sections form a contiguous block from the optimum up to the trial, and every dip sits among sections heavier than the trial, which the downward walk never meets. The heuristic therefore reaches the optimum structurally on the sample, not by luck. The counter is part of P9 (see the P9 line in `docs/patch_plan.md`); the full count over all 34,841 contexts is computed there, and if any context breaks the block, the Gate 3 record will explain how the heuristic still matched.
++
++## P9: landscape and saturation diagnostics (2026-11-11)
++
++**What was built.** `src/ub_rl/reward_checks.py` (the five reward families and the float64 log-space ordering assertion with analytic margin bounds), `src/ub_rl/landscape.py` (monotonicity counter c1/c2/c2_block, all-pairs F1 action-graph distances, per-context diagnostics with `Checker.check` at the optimum), and `scripts/landscape_diagnostics.py` (one script: enumeration pass, landscape/horizon/governing/alternatives tables, the saturation table with V as the headline line and the ordered-scan row, the reward assertion on V, the Gate 3 record; `--check` rebuilds in a temporary folder and compares the committed files; `--limit N` is a sample that writes nothing committed and skips the P7 snapshot assertion by design; full runs must reproduce the P7 snapshot per file and are the only runs that write the committed outputs). Tests: 9 + 10 + 6 new; `python -m pytest -q` reported 200 passed on `review`.
++
++**Sample run (`--limit 12` = 100 contexts), run by Claude on the project lead's machine.** 3.96 s wall (3.65 s user, 69.5 MB peak RSS), single-threaded; outputs under `results/p9_sample/` (nothing committed). Findings on the sample:
++- Monotonicity genuinely fails: c1 in 58 of 100 contexts (c1_edges 191); c2 = 0 and c2_block = 0 in every sampled context — the feasible block from the optimum to the walk start is contiguous everywhere, which is the structural explanation of the P7 zero gap.
++- F1 horizon: the optimum is at most 9 F1 steps from the trial section on the sample (t2), at most 8 elsewhere — no context needs more than 12, so no flag. The full-run verdict is recorded in `docs/gate3_record.md`; the horizon is never changed by the script.
++- Saturation on the sampled V (12 contexts): heuristic exact 12/12 of the feasible, 0 false abstentions, 0 infeasible outputs (rechecked), mean heuristic calls 13.67, mean ordered-scan calls 62.58 → the rule (exact match >= 0.99, feasibility 1.0) is MET on the sample.
++- Reward ordering: the assertion passed on the sampled V for every family (R1, R2, R3 at beta 25/50/100, R-C, R-D), margins at or above the analytic bounds.
++
++**Full run.** Command: `python scripts/landscape_diagnostics.py` — expected about 2 minutes (1.81 ms per context measured on a 100-context val sample, 34,841 contexts ≈ 63 s, plus the heuristic and the reward assertion); `--check` doubles the work. The full run writes `paper/tables/p9_*.csv`, `docs/gate3_record.md` and `results/p9/`, and asserts the P7 snapshot (per-file feasible counts and mean heuristic calls) exactly. It is for the project lead, as with P7; the Gate 3 record then states the saturation outcome per context set and whether any context needs more than 12 F1 steps (flagged for approval, the horizon unchanged).
+diff --git a/scripts/landscape_diagnostics.py b/scripts/landscape_diagnostics.py
+new file mode 100644
+index 0000000..50e60f6
+--- /dev/null
++++ b/scripts/landscape_diagnostics.py
+@@ -0,0 +1,556 @@
++"""P9: landscape and saturation diagnostics, the F1 horizon check, the reward-ordering assertion on
++V and the Gate 3 record (spec sections 9 and 12; patch plan P9). One script reproduces everything.
++
++Run from the repository root:
++    python scripts/landscape_diagnostics.py [workbook.xlsx]             full run over all 34,841 contexts:
++                                                                        writes paper/tables/p9_*.csv and
++                                                                        docs/gate3_record.md (committed),
++                                                                        results/p9/*.csv with *_meta.json
++                                                                        (results/ is ignored)
++    python scripts/landscape_diagnostics.py [workbook.xlsx] --check     regenerate in a temporary folder and
++                                                                        compare with the committed files (exit 1
++                                                                        if any differs)
++    python scripts/landscape_diagnostics.py [workbook.xlsx] --limit N   sample run: the first N contexts per
++                                                                        split file; nothing committed, the P7
++                                                                        snapshot assertions are skipped, and the
++                                                                        results go to results/p9_sample
++    --out DIR                                                           write the runstore results to DIR instead
++
++What the script computes (one vectorised enumeration pass per context, 91 checker calls each, plus
++the heuristic's own measured calls; nothing trains, nothing changes the checker, the physics, the
++objective or the splits):
++  monotonicity counter  c1: a lighter section is feasible while a heavier one below it is not (any
++                        pair, plus the adjacent-edge count c1_edges); c2: an infeasible section lies
++                        strictly between the optimum and the heuristic's trial section (the patch
++                        plan's phrasing); c2_block: the same between the optimum and the first
++                        feasible section at or above the trial (exactly the stretch the heuristic's
++                        downward walk must pass)
++  F1 horizon check      fewest F1 actions from the trial section to the optimum on the actual action
++                        graph (mass step up/down, lightest section of the next strictly deeper or
++                        shallower series; accept terminates and is not counted; a no-op past either
++                        end costs a step but never shortens a path, so it is not an edge). The script
++                        reports the distribution and the share of contexts needing more than
++                        HORIZON_F1 = 12 steps (spec section 9). It never changes the horizon: an
++                        excess is recorded and flagged for approval, per instruction.
++  governing check       Checker.check at the optimum with the context's config applied: the checker's
++                        own tie-break, not a reimplementation
++  alternatives          feasible sections within 5 % of the optimal mass; of those, the ones whose
++                        depth differs from the optimum's by at least 50 mm (spec section 9)
++  saturation            per set with V as the headline line: heuristic exact-match share over the
++                        feasible contexts, false abstentions, infeasible outputs (rechecked), mean
++                        heuristic calls; the ordered scan is exact by definition (the first feasible
++                        section in mass order is the lightest feasible section; P7 verified
++                        enumeration = ordered scan on every context) and its mean call count is read
++                        from the mask
++  reward ordering       reward_checks.assert_ordering on every validation context, per family
++                        (R1, R2, R3 at beta 25/50/100, R-C, R-D): the smallest feasible candidate
++                        return must exceed the largest infeasible candidate return, in float64
++                        log-space, margin at or above the analytic bound
++On a full run the per-file feasible counts and mean heuristic calls must reproduce the committed P7
++snapshot (results/baselines1/run_summary.json, commit b5aadf4); on a sample run that assertion is
++skipped, as recorded in the metas.
++"""
++import os, sys; sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))  # use the repository src/ (run from the repository root)
++from ub_rl.runstore import hardware_info, limit_threads, write_meta, write_results  # noqa: E402
++
++limit_threads()  # before numpy is imported: spec section 10, single CPU thread
++
++import csv  # noqa: E402
++import json  # noqa: E402
++import platform  # noqa: E402
++import subprocess  # noqa: E402
++import tempfile  # noqa: E402
++import time  # noqa: E402
++from collections import Counter  # noqa: E402
++from pathlib import Path  # noqa: E402
++
++import numpy as np  # noqa: E402
++
++from ub_rl import reward_checks as RC  # noqa: E402
++from ub_rl import splits as S  # noqa: E402
++from ub_rl.baselines import CountingChecker, heuristic  # noqa: E402
++from ub_rl.catalogue import parse_workbook, sha256_file  # noqa: E402
++from ub_rl.checker import CHECKS, Checker  # noqa: E402
++from ub_rl.landscape import HORIZON_F1, diagnose, f1_distances  # noqa: E402
++
++DEFAULT_WORKBOOK = "data/raw/UB-secpropsdimsprops-EC3UKNA-UK-10-16-2026.xlsx"
++SPLIT_FILES = ["train", "val", "test_t1", "test_t2", "test_t3", "test_t4", "test_t5", "v12_substudy", "reference"]
++SET_ORDER = ["train", "val", "t1", "t2", "t3-E1", "t3-E2", "t3-E3", "t4-A", "t4-B", "t5", "s12-val", "s12-t1",
++             "s12-t2", "s12-E1", "s12-E2", "s12-E3", "ref"]
++ENV_FILE = "src/ub_rl/checker.py"
++HASHED_FILES = ["src/ub_rl/checker.py", "src/ub_rl/context.py", "src/ub_rl/config.py", "src/ub_rl/splits.py",
++                "src/ub_rl/baselines.py", "src/ub_rl/landscape.py", "src/ub_rl/reward_checks.py",
++                "scripts/landscape_diagnostics.py"]
++COMMITTED = ["p9_landscape.csv", "p9_horizon.csv", "p9_governing.csv", "p9_alternatives.csv", "p9_saturation.csv",
++             "p9_rewards.csv"]
++
++# P7 committed snapshot (results/baselines1/run_summary.json, commit b5aadf4): the heuristic matched the
++# enumeration optimum in every feasible context, with these per-file feasible counts and mean calls
++# (means over all n contexts including abstentions). A full run must reproduce them exactly.
++EXPECTED_P7 = {
++    "train": (16723, 13.553), "val": (796, 14.193), "test_t1": (1635, 13.74), "test_t2": (388, 15.302),
++    "test_t3": (609, 19.229), "test_t4": (1404, 9.883), "test_t5": (3102, 13.863),
++    "v12_substudy": (4500, 2.416), "reference": (4, 8.75),
++}
++
++
++# ------------------------------------------------------------------ shared helpers (context_audit style)
++def write_rows(path, rows, columns):
++    path.parent.mkdir(parents=True, exist_ok=True)
++    with open(path, "w", newline="", encoding="ascii") as f:
++        wr = csv.DictWriter(f, fieldnames=columns, lineterminator="\n")
++        wr.writeheader()
++        wr.writerows(rows)
++
++
++def git_info():
++    try:
++        commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
++        dirty = bool(subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=no"], text=True).strip())
++    except Exception:
++        commit, dirty = "unknown", None
++    return commit, dirty
++
++
++def f2(x):
++    return f"{x:.2f}"
++
++
++def f3(x):
++    return f"{x:.3f}"
++
++
++def f4(x):
++    return f"{x:.4f}"
++
++
++def f6(x):
++    return f"{x:.6f}"
++
++
++# ------------------------------------------------------------------ the run
++def build(root, workbook, limit=None, out_results=None):
++    """Run the diagnostics and write every output under root (paper/tables and docs — the committed
++    outputs on a full run) and the runstore results (root/results/p9, p9_sample for --limit, or
++    out_results). Returns the summary dict."""
++    root = Path(root)
++    t0 = time.perf_counter()
++    # the split files must be the committed ones (never change the splits)
++    manifest = {}
++    for line in Path("data/splits/SHA256SUMS").read_text(encoding="ascii").splitlines():
++        sha, name = line.split()
++        manifest[name] = sha
++    bad = [n for n in SPLIT_FILES if sha256_file(Path("data/splits") / f"{n}.csv") != manifest[f"{n}.csv"]]
++    if bad:
++        raise RuntimeError(f"split files differ from the committed manifest: {bad}")
++
++    cat, _ = parse_workbook(workbook)
++    C = cat.mass_ordered(False)
++    K = Checker(C)
++    kc = CountingChecker(K)  # counts the heuristic's checker calls (the enumeration uses K directly)
++    f1_d = f1_distances(K.cat.series, K.h)
++    hashes = {p: sha256_file(p) for p in HASHED_FILES}
++    commit, dirty = git_info()
++    hardware = hardware_info()
++    rdir = Path(out_results) if out_results else root / "results" / ("p9_sample" if limit else "p9")
++    # committed outputs (paper/tables, docs) are written under root only on a full run; a sample run
++    # keeps its tables and record next to its results (nothing committed, per the patch plan)
++    troot = rdir if limit is not None else root
++
++    agg = {}  # set -> aggregates across the split files
++    files = []  # per-file summaries
++    val_ctxs = []  # the validation contexts for the reward-ordering assertion
++    horizon_excess = []  # (set, n_gt12, n_feasible) — recorded, never acted on
++    for fname in SPLIT_FILES:
++        rows, ctxs = S.load_split(fname)
++        if limit:
++            rows, ctxs = rows[:limit], ctxs[:limit]
++        if fname == "val":
++            val_ctxs = ctxs
++        ctx_rows = []
++        heur_calls_total = 0
++        n_feasible = n_abstain = heur_exact = false_abstain = infeasible_outputs = 0
++        for r, ctx in zip(rows, ctxs):
++            e = K.evaluate_context(ctx)
++            d = diagnose(K, ctx, f1_d, e=e)
++            hres = heuristic(kc, ctx)  # measured calls, memoised within the context
++            heur_calls_total += hres.calls
++            opt = d["opt"]
++            n_feasible += opt >= 0
++            n_abstain += opt < 0
++            inf_out = 0
++            if hres.index >= 0:  # recheck every output: the saturation feasibility column
++                if not bool(kc.evaluate_context(ctx, [hres.index])["feasible"][0]):
++                    inf_out = 1
++            infeasible_outputs += inf_out
++            heur_exact += int(hres.index == opt)
++            false_abstain += int(opt >= 0 and hres.index < 0)
++            scan_calls = int(opt + 1) if opt >= 0 else len(kc)  # ordered scan: exact by definition
++            ctx_rows.append({
++                "id": r["id"], "set": r["set"], "file": fname, "feasible": int(opt >= 0),
++                "opt": opt, "optimum_name": C.names[opt] if opt >= 0 else "",
++                "mass_kg_m": f"{K.mass[opt]:.1f}" if opt >= 0 else "", "depth_mm": f"{K.h[opt]:.0f}" if opt >= 0 else "",
++                "trial": d["trial"] if opt >= 0 else "", "f1_distance": d["f1_distance"] if opt >= 0 else "",
++                "c1": d.get("c1", 0), "c1_edges": d.get("c1_edges", 0), "c2": d.get("c2", 0),
++                "c2_block": d.get("c2_block", 0), "walk_start": d.get("walk_start", ""),
++                "governing": d.get("governing", ""), "u_opt": f6(d["u_opt"]) if "u_opt" in d else "",
++                "n_within5": d.get("n_within5", 0), "n_depth50": d.get("n_depth50", 0),
++                "heuristic_index": hres.index, "heuristic_exact": int(hres.index == opt),
++                "heuristic_calls": hres.calls, "scan_calls": scan_calls,
++            })
++            a = agg.setdefault(r["set"], {"n": 0, "n_feasible": 0, "opts": set(), "c1": 0, "c1_edges": 0,
++                                          "c2": 0, "c2_block": 0, "within5": 0, "within5_gt1": 0, "depth50": 0,
++                                          "depth50_any": 0, "horizon": Counter(), "heur_exact": 0,
++                                          "heur_calls": 0, "scan_calls": 0, "heur_outputs": 0,
++                                          "false_abstain": 0, "infeasible_outputs": 0, "governing": Counter()})
++            a["n"] += 1
++            a["heur_exact"] += int(hres.index == opt)
++            a["heur_calls"] += hres.calls
++            a["scan_calls"] += scan_calls
++            a["heur_outputs"] += int(hres.index >= 0)
++            a["false_abstain"] += int(opt >= 0 and hres.index < 0)
++            a["infeasible_outputs"] += inf_out
++            if opt >= 0:
++                a["n_feasible"] += 1
++                a["opts"].add(opt)
++                a["c1"] += d["c1"]
++                a["c1_edges"] += d["c1_edges"]
++                a["c2"] += d["c2"]
++                a["c2_block"] += d["c2_block"]
++                a["within5"] += d["n_within5"]
++                a["within5_gt1"] += int(d["n_within5"] > 1)
++                a["depth50"] += d["n_depth50"]
++                a["depth50_any"] += int(d["n_depth50"] > 0)
++                a["horizon"][d["f1_distance"]] += 1
++                a["governing"][d["governing"]] += 1
++        # per-context results with a runstore meta (results/ is ignored by git)
++        path = rdir / f"p9_contexts_{fname}.csv"
++        write_results(path, ctx_rows,
++                      ["id", "set", "file", "feasible", "opt", "optimum_name", "mass_kg_m", "depth_mm", "trial",
++                       "f1_distance", "c1", "c1_edges", "c2", "c2_block", "walk_start", "governing", "u_opt",
++                       "n_within5", "n_depth50", "heuristic_index", "heuristic_exact", "heuristic_calls",
++                       "scan_calls"],
++                      {"status": "complete", "method": "p9_landscape", "commit": commit,
++                       "environment_file": ENV_FILE, "environment_sha256": hashes[ENV_FILE],
++                       "catalogue_sha256": sha256_file(workbook), "catalogue_set": "C", "catalogue_rows": len(kc),
++                       "split_file": f"data/splits/{fname}.csv", "split_sha256": manifest[f"{fname}.csv"],
++                       "n_contexts": len(rows), "n_feasible": n_feasible, "n_abstain": n_abstain,
++                       "limit": limit, "file_sha256": hashes, "hardware": hardware,
++                       "elapsed_seconds": round(time.perf_counter() - t0, 3)})
++        files.append({"file": fname, "n": len(rows), "n_feasible": n_feasible, "n_abstain": n_abstain,
++                      "heuristic_exact": heur_exact, "false_abstain": false_abstain,
++                      "infeasible_outputs": infeasible_outputs,
++                      "mean_heuristic_calls": f3(heur_calls_total / len(rows)),
++                      "mean_scan_calls": f2(sum(r["scan_calls"] for r in ctx_rows) / len(rows))})
++        # P7 snapshot assertion on full runs only (sample runs are explicitly not this evidence)
++        if limit is None:
++            n_exp, calls_exp = EXPECTED_P7[fname]
++            assert n_feasible == n_exp, f"{fname}: {n_feasible} feasible contexts, P7 snapshot has {n_exp}"
++            assert round(heur_calls_total / len(rows), 3) == calls_exp, \
++                f"{fname}: mean heuristic calls {round(heur_calls_total / len(rows), 3)}, P7 snapshot has {calls_exp}"
++    p7_ok = limit is None  # the snapshot was asserted above on full runs; skipped by design on samples
++
++    # ------------------------------------------------ the per-set tables
++    sets_present = [s for s in SET_ORDER if s in agg]
++    write_rows(troot / "paper" / "tables" / "p9_landscape.csv",
++               [{"set": s, "n": agg[s]["n"], "n_feasible": agg[s]["n_feasible"],
++                 "n_optima_distinct": len(agg[s]["opts"]), "c1": agg[s]["c1"], "c1_edges": agg[s]["c1_edges"],
++                 "c2": agg[s]["c2"], "c2_block": agg[s]["c2_block"]} for s in sets_present],
++               ["set", "n", "n_feasible", "n_optima_distinct", "c1", "c1_edges", "c2", "c2_block"])
++
++    horizon_rows, horizon_ok = [], True
++    for s in sets_present:
++        h, nf = agg[s]["horizon"], agg[s]["n_feasible"]
++        gt12 = sum(v for k, v in h.items() if k > HORIZON_F1)
++        if gt12:
++            horizon_ok = False
++            horizon_excess.append((s, gt12, nf))
++        row = {"set": s, "n_feasible": nf}
++        for k in range(HORIZON_F1 + 1):
++            row[f"d{k}"] = h[k]
++        row.update({"gt12": gt12, "share_gt12": f4(gt12 / nf) if nf else "0.0000",
++                    "max_d": max(h) if nf else "",
++                    "flag": f"APPROVAL NEEDED: {gt12} of {nf} contexts need more than {HORIZON_F1} F1 steps"
++                            if gt12 else ""})
++        horizon_rows.append(row)
++    write_rows(troot / "paper" / "tables" / "p9_horizon.csv", horizon_rows,
++               ["set", "n_feasible"] + [f"d{k}" for k in range(HORIZON_F1 + 1)] + ["gt12", "share_gt12", "max_d", "flag"])
++
++    governing_rows = [{"set": s, "n_feasible": agg[s]["n_feasible"],
++                       **{c: agg[s]["governing"][c] for c in CHECKS}} for s in sets_present]
++    write_rows(troot / "paper" / "tables" / "p9_governing.csv", governing_rows, ["set", "n_feasible"] + list(CHECKS))
++
++    alternatives_rows = [{"set": s, "n_feasible": agg[s]["n_feasible"],
++                          "mean_within5": f2(agg[s]["within5"] / agg[s]["n_feasible"]) if agg[s]["n_feasible"] else "",
++                          "n_within5_gt1": agg[s]["within5_gt1"],
++                          "mean_depth50": f2(agg[s]["depth50"] / agg[s]["n_feasible"]) if agg[s]["n_feasible"] else "",
++                          "n_depth50_any": agg[s]["depth50_any"]} for s in sets_present]
++    write_rows(troot / "paper" / "tables" / "p9_alternatives.csv", alternatives_rows,
++               ["set", "n_feasible", "mean_within5", "n_within5_gt1", "mean_depth50", "n_depth50_any"])
++
++    # saturation: V is the headline line (first row); ordered scan exact by definition (P7 verified
++    # enumeration = ordered scan on every context), its mean call count read from the mask
++    saturation_rows = []
++    for s in ["val"] + [x for x in sets_present if x != "val"]:
++        a, nf = agg[s], agg[s]["n_feasible"]
++        sat_met = int(nf > 0 and (a["heur_exact"] / nf) >= 0.99 and a["infeasible_outputs"] == 0
++                      and a["false_abstain"] == 0)
++        saturation_rows.append({
++            "set": s, "n": a["n"], "n_feasible": nf, "n_abstain": a["n"] - nf,
++            "heuristic_outputs": a["heur_outputs"], "heuristic_exact": a["heur_exact"],
++            "exact_share": f4(a["heur_exact"] / nf) if nf else "", "false_abstain": a["false_abstain"],
++            "infeasible_outputs": a["infeasible_outputs"],
++            "feasibility_share": f4((a["heur_outputs"] - a["infeasible_outputs"]) / a["heur_outputs"])
++                                 if a["heur_outputs"] else "",
++            "heuristic_calls_mean": f3(a["heur_calls"] / a["n"]), "scan_calls_mean": f2(a["scan_calls"] / a["n"]),
++            "ordered_scan_exact": 1, "saturation_rule_met": sat_met})
++    write_rows(troot / "paper" / "tables" / "p9_saturation.csv", saturation_rows,
++               ["set", "n", "n_feasible", "n_abstain", "heuristic_outputs", "heuristic_exact", "exact_share",
++                "false_abstain", "infeasible_outputs", "feasibility_share", "heuristic_calls_mean",
++                "scan_calls_mean", "ordered_scan_exact", "saturation_rule_met"])
++
++    # reward-ordering assertion on every validation context, per family (float64 log-space)
++    rewards_report = RC.assert_ordering(K, val_ctxs)
++    write_rows(troot / "paper" / "tables" / "p9_rewards.csv",
++               [{"family": r["family"], "beta": r["beta"], "key": r["key"], "n": r["n"],
++                 "n_nonvacuous": r["n_nonvacuous"], "n_vacuous": r["n_vacuous"],
++                 "min_margin": f6(r["min_margin"]), "max_margin": f6(r["max_margin"]),
++                 "margin_bound": f6(r["margin_bound"]), "violations": r["violations"], "pass": r["pass"]}
++                for r in rewards_report["rows"]],
++               ["family", "beta", "key", "n", "n_nonvacuous", "n_vacuous", "min_margin", "max_margin",
++                "margin_bound", "violations", "pass"])
++
++    summary = {
++        "script": "scripts/landscape_diagnostics.py", "commit": commit, "working_tree_dirty": dirty,
++        "environment_file": ENV_FILE, "environment_sha256": hashes[ENV_FILE],
++        "catalogue_sha256": sha256_file(workbook), "catalogue_set": "C", "catalogue_rows": len(kc),
++        "split_manifest_sha256": sha256_file("data/splits/SHA256SUMS"), "limit": limit,
++        "n_contexts_total": sum(f["n"] for f in files), "p7_snapshot_ok": p7_ok,
++        "horizon": HORIZON_F1, "horizon_confirmed": horizon_ok, "horizon_excess": horizon_excess,
++        "horizon_rows": horizon_rows, "governing": {r["set"]: r for r in governing_rows},
++        "alternatives": {r["set"]: r for r in alternatives_rows},
++        "files": files, "sets": {s: {"n": agg[s]["n"], "n_feasible": agg[s]["n_feasible"],
++                                     "n_optima_distinct": len(agg[s]["opts"]), "c1": agg[s]["c1"],
++                                     "c1_edges": agg[s]["c1_edges"], "c2": agg[s]["c2"],
++                                     "c2_block": agg[s]["c2_block"]} for s in sets_present},
++        "saturation": saturation_rows, "rewards": rewards_report,
++        "n_checker_invocations": kc.invocations, "n_section_evaluations": kc.sections,
++        "hardware": hardware, "python": platform.python_version(), "numpy": np.__version__,
++        "started_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
++        "elapsed_seconds": round(time.perf_counter() - t0, 3),
++    }
++    spath = rdir / "p9_summary.json"
++    spath.parent.mkdir(parents=True, exist_ok=True)
++    with open(spath, "w", encoding="ascii", newline="\n") as f:
++        json.dump(summary, f, indent=2)
++        f.write("\n")
++    write_meta(spath, {"status": "complete", "method": "p9_landscape", "commit": commit,
++                       "environment_file": ENV_FILE, "environment_sha256": hashes[ENV_FILE],
++                       "catalogue_sha256": sha256_file(workbook),
++                       "split_file": "data/splits/SHA256SUMS (all split files)",
++                       "split_sha256": sha256_file("data/splits/SHA256SUMS"),
++                       "n_contexts": summary["n_contexts_total"]})
++
++    render_gate3(troot / "docs" / "gate3_record.md", summary, hashes, commit, dirty, limit)
++    if horizon_excess:
++        print("APPROVAL NEEDED: the optimum lies more than 12 F1 steps from the trial section in:",
++              horizon_excess, file=sys.stderr)
++        print("The horizon was NOT changed; HORIZON_F1 stays 12. Flag recorded in p9_horizon.csv and the gate record.",
++              file=sys.stderr)
++    return summary
++
++
++# ------------------------------------------------------------------ the Gate 3 record (deterministic)
++def render_gate3(path, summary, hashes, commit, dirty, limit):
++    def md_table(cols, rows):
++        lines = ["| " + " | ".join(cols) + " |", "|" + "---|" * len(cols)]
++        lines += ["| " + " | ".join(str(r[c]) for c in cols) + " |" for r in rows]
++        return "\n".join(lines)
++
++    sets = [s for s in SET_ORDER if s in summary["sets"]]
++    sat = {r["set"]: r for r in summary["saturation"]}
++    val = sat["val"]
++    lines = ["# Gate 3 record - P9 landscape and saturation diagnostics", ""]
++    lines += [f"Provenance: `scripts/landscape_diagnostics.py`, commit {commit},"
++              f"{' working tree dirty' if dirty else ' clean'}; environment `src/ub_rl/checker.py` "
++              f"sha256 {hashes[ENV_FILE][:16]}...; catalogue workbook sha256 {summary['catalogue_sha256'][:16]}...; "
++              f"split manifest `data/splits/SHA256SUMS` sha256 {summary['split_manifest_sha256'][:16]}...; "
++              f"catalogue C ({summary['catalogue_rows']} sections); {summary['n_contexts_total']} contexts"
++              f"{f' (sample run, first {limit} contexts per split file)' if limit else ' (full run)'}; heuristic call "
++              f"accounting measured by the checker wrapper. Generated deterministically; `--check` reproduces "
++              f"this record byte for byte.", ""]
++    lines += ["## Saturation (headline line: V)", "",
++              "Heuristic iteration against the enumeration optimum, per set. The ordered scan is exact by "
++              "definition - its first feasible section in mass order is the lightest feasible section - and P7 "
++              "verified enumeration = ordered scan on every context; its mean call count below is read from the "
++              "enumeration mask. Heuristic outputs are rechecked; false abstentions are counted.", "",
++              md_table(["set", "n", "n_feasible", "heuristic exact", "exact share", "false abstain",
++                        "infeasible outputs", "feasibility share", "heuristic calls (mean)",
++                        "scan calls (mean)", "rule met"],
++                       [{"set": s, "n": sat[s]["n"], "n_feasible": sat[s]["n_feasible"],
++                         "heuristic exact": sat[s]["heuristic_exact"], "exact share": sat[s]["exact_share"],
++                         "false abstain": sat[s]["false_abstain"], "infeasible outputs": sat[s]["infeasible_outputs"],
++                         "feasibility share": sat[s]["feasibility_share"],
++                         "heuristic calls (mean)": sat[s]["heuristic_calls_mean"],
++                         "scan calls (mean)": sat[s]["scan_calls_mean"], "rule met": sat[s]["saturation_rule_met"]}
++                        for s in ["val"] + [x for x in sets if x != "val"]]), ""]
++    lines += ["Saturation rule (spec section 12): heuristic iteration or the classifier at exact match >= 0.99 and "
++              "feasibility 1.0 on V. Reading used here: the exact share is over the feasible contexts (abstentions "
++              "excluded, false abstentions counted against it), and feasibility is the share of heuristic outputs "
++              "that are feasible (rechecked; an abstention is not an output). On V: exact share "
++              f"{val['exact_share']}, false abstain {val['false_abstain']}, infeasible outputs "
++              f"{val['infeasible_outputs']} -> the rule is "
++              f"{'MET' if val['saturation_rule_met'] else 'NOT MET'} on V.", ""]
++    lines += ["## Monotonicity counter", "",
++              "c1: a lighter section is feasible while a heavier one below it is not (any pair; c1_edges is the "
++              "adjacent-edge count). c2: an infeasible section strictly between the optimum and the heuristic's "
++              "trial section (the patch plan's phrasing). c2_block: the same between the optimum and the first "
++              "feasible section at or above the trial - exactly the stretch the downward walk must pass, so "
++              "c2_block = 0 means the walk reaches the optimum structurally.", "",
++              md_table(["set", "n_feasible", "distinct optima", "c1", "c1_edges", "c2", "c2_block"],
++                       [{"set": s, "n_feasible": summary["sets"][s]["n_feasible"],
++                         "distinct optima": summary["sets"][s]["n_optima_distinct"], "c1": summary["sets"][s]["c1"],
++                         "c1_edges": summary["sets"][s]["c1_edges"], "c2": summary["sets"][s]["c2"],
++                         "c2_block": summary["sets"][s]["c2_block"]} for s in sets]), ""]
++    c1_total = sum(summary["sets"][s]["c1"] for s in sets)
++    c2b_total = sum(summary["sets"][s]["c2_block"] for s in sets)
++    if c1_total == 0:
++        lines += ["Feasibility is monotone in mass order on every split: no lighter section is feasible where a "
++                  "heavier one below it is not. The heuristic and the ordered scan are therefore equal "
++                  "structurally, which explains the P7 result (the heuristic matched the enumeration optimum in "
++                  "all 29,161 feasible contexts).", ""]
++    else:
++        lines += [f"Monotonicity fails in {c1_total} contexts (c1); c2_block = {c2b_total}. The P7 zero gap "
++                  f"forces c2_block = 0 in every feasible context (the stretch from the optimum to the walk start "
++                  f"has no infeasible section, so the downward walk reaches the optimum); non-monotone dips above "
++                  f"the trial cannot be reached by the walk. These counts are the recorded explanation.", ""]
++    lines += ["## F1 horizon check (spec section 9, horizon %d)" % HORIZON_F1, "",
++              "Fewest F1 actions from the trial section to the optimum on the actual action graph (mass step "
++              "up/down, lightest section of the next strictly deeper or shallower series; accept terminates and "
++              "is not counted; a no-op past either end costs a step but never shortens a path, so it is not an "
++              "edge). Gate 3 verifies the optimum lies within 12 steps of the trial section on every split.", "",
++              md_table(["set", "n_feasible", "max steps", "share needing more than 12"],
++                       [{"set": r["set"], "n_feasible": r["n_feasible"], "max steps": r["max_d"],
++                         "share needing more than 12": r["share_gt12"]} for r in summary["horizon_rows"]]), ""]
++    if summary["horizon_confirmed"]:
++        lines += [f"The F1 horizon of {HORIZON_F1} is confirmed: on every split, every feasible context's optimum "
++                  f"is reachable from the trial section in at most {HORIZON_F1} F1 actions.", ""]
++    else:
++        lines += ["**APPROVAL NEEDED - the F1 horizon of 12 is NOT confirmed.** The sets below need more than 12 "
++                  "steps; the horizon was not changed, per instruction:", ""]
++        for s, n, nf in summary["horizon_excess"]:
++            lines += [f"- {s}: {n} of {nf} feasible contexts need more than {HORIZON_F1} steps", ""]
++    lines += ["## Governing check at the optimum", "",
++              "Checker.check at each context's optimum with the context's config applied (the checker's own "
++              "tie-break, not a reimplementation); counts of the governing utilisation per set.", "",
++              md_table(["set", "n_feasible"] + list(CHECKS),
++                       [{"set": s, "n_feasible": summary["governing"][s]["n_feasible"],
++                         **{c: summary["governing"][s][c] for c in CHECKS}} for s in sets]), ""]
++    lines += ["## Alternatives (within 5 % of optimal mass; depth differing by >= 50 mm)", "",
++              md_table(["set", "n_feasible", "mean within 5 %", "with > 1", "mean depth >= 50", "any"],
++                       [{"set": s, "n_feasible": a["n_feasible"], "mean within 5 %": a["mean_within5"],
++                         "with > 1": a["n_within5_gt1"], "mean depth >= 50": a["mean_depth50"],
++                         "any": a["n_depth50_any"]} for s in sets for a in [summary["alternatives"][s]]]), ""]
++    lines += ["## Reward ordering on V (float64 log-space)", "",
++              "The assertion: for every validation context and every family, the smallest return over all feasible "
++              "candidates exceeds the largest return over all infeasible candidates, in float64 log-space, with a "
++              "margin at or above the analytic bound (R1/R2/R-C 0.988, R3 10, R-D 0.5). A candidate is a "
++              "(section, calls 0..12) pair; contexts with no feasible or no infeasible candidate are vacuous and "
++              "counted, not failed.", "",
++              md_table(["key", "family", "beta", "n", "non-vacuous", "vacuous", "min margin", "bound", "violations", "pass"],
++                       [{"key": r["key"], "family": r["family"], "beta": r["beta"], "n": r["n"],
++                         "non-vacuous": r["n_nonvacuous"],
++                         "vacuous": r["n_vacuous"], "min margin": r["min_margin"], "bound": r["margin_bound"],
++                         "violations": r["violations"], "pass": r["pass"]}
++                        for r in summary["rewards"]["rows"]]), ""]
++    if all(r["pass"] for r in summary["rewards"]["rows"]):
++        lines += ["The assertion holds: zero violations on every validation context and every family, margins at "
++                  "or above the analytic bounds.", ""]
++    else:
++        lines += ["**The assertion FAILED** - see the violations column; the families are not ordered on V.", ""]
++    lines += ["## What the paper can claim", ""]
++    if summary["horizon_confirmed"]:
++        lines += ["- Gate 3's F1 precondition holds: on every split the optimum lies within 12 F1 steps of the "
++                  "trial section (spec section 9), so the horizon needs no amendment.", ""]
++    else:
++        lines += ["- The F1 horizon precondition is NOT confirmed; the paper must record the flagged sets and the "
++                  "amendment decision before training.", ""]
++    if c1_total == 0:
++        lines += ["- Feasibility is monotone in mass order on every split, so the heuristic equals the ordered "
++                  "scan structurally, which explains the P7 zero gap (29,161 feasible contexts, all exact).", ""]
++    else:
++        lines += [f"- Monotonicity fails in {c1_total} contexts; c2_block = {c2b_total} is the recorded "
++                  f"explanation of why the P7 zero gap still holds.", ""]
++    if val["saturation_rule_met"]:
++        lines += ["- Saturation on V: the heuristic reaches exact match >= 0.99 with feasibility 1.0 on V (spec "
++                  "section 12), so the study reports that a learned policy has no quality headroom on V; RL still "
++                  "runs for sample efficiency, diversity and cost, and no quality-superiority claim is possible "
++                  "there.", ""]
++    else:
++        lines += ["- The saturation rule is NOT met on V; the study does not report the no-headroom statement, "
++                  "and the P8 classifier leg decides the saturation outcome per the rule.", ""]
++    if all(r["pass"] for r in summary["rewards"]["rows"]):
++        lines += ["- The reward-ordering property holds on every validation context for every family in float64 "
++                  "log-space, so the families separate feasible from infeasible candidates (Gate 3's reward "
++                  "asserts).", ""]
++    lines += ["## Assumptions and readings", "",
++              "1. Saturation exact share is over feasible contexts; false abstentions count against it; "
++              "feasibility is the share of rechecked heuristic outputs that are feasible.",
++              "2. The ordered scan is exact by definition and P7-verified; it is not re-run, its mean call count "
++              "comes from the enumeration mask.",
++              "3. Mean heuristic calls are over all n contexts including abstentions (the P7 convention).",
++              "4. The horizon check counts actions on the actual F1 graph; accept terminates and is not counted; "
++              "no-ops past the ends are not graph edges.",
++              "5. Catalogue C only (91 sections); C+ is a sensitivity and out of scope here.",
++              "6. On a full run the per-file feasible counts and mean heuristic calls must reproduce the P7 "
++              "snapshot exactly (asserted by the script); sample runs skip the assertion and say so.", ""]
++    path.parent.mkdir(parents=True, exist_ok=True)
++    path.write_text("\n".join(lines), encoding="ascii", newline="\n")
++
++
++# ------------------------------------------------------------------ --check: rebuild in a temp folder and compare
++def compare(tmp):
++    names = [f"paper/tables/{n}" for n in COMMITTED] + ["docs/gate3_record.md"]
++    bad = [name for name in names if Path(name).read_bytes() != Path(tmp, name).read_bytes()]
++    if bad:
++        print("DIFFERING:", *bad, sep="\n  ")
++        return 1
++    print(f"identical ({len(names)} files)")
++    return 0
++
++
++def main(argv):
++    limit, out, check = None, None, False
++    positional = []
++    i = 0
++    while i < len(argv):
++        a = argv[i]
++        if a == "--limit" and i + 1 < len(argv):
++            limit = int(argv[i + 1])
++            i += 2
++        elif a == "--out" and i + 1 < len(argv):
++            out = argv[i + 1]
++            i += 2
++        elif a == "--check":
++            check = True
++            i += 1
++        else:
++            positional.append(a)
++            i += 1
++    if len(positional) > 1:
++        raise SystemExit("usage: landscape_diagnostics.py [workbook.xlsx] [--limit N] [--out DIR] [--check]")
++    workbook = positional[0] if positional else DEFAULT_WORKBOOK
++    if limit is not None and limit < 1:
++        raise SystemExit("--limit must be at least 1")
++    if check:
++        if limit is not None:
++            raise SystemExit("--check compares the committed full-run outputs; --limit is not allowed with it")
++        tmp = Path(tempfile.mkdtemp(prefix="p9_check_"))
++        build(tmp, workbook, limit=None)
++        return compare(tmp)
++    build(Path("."), workbook, limit=limit, out_results=out)
++    return 0
++
++
++if __name__ == "__main__":
++    raise SystemExit(main(sys.argv[1:]))
+diff --git a/src/ub_rl/landscape.py b/src/ub_rl/landscape.py
+new file mode 100644
+index 0000000..b0eb694
+--- /dev/null
++++ b/src/ub_rl/landscape.py
+@@ -0,0 +1,121 @@
++"""P9 landscape diagnostics over the mass-ordered catalogue C (spec sections 9 and 12; patch plan P9).
++
++One line each:
++  feasibility mask  per section, True where every check passes and the depth cap holds (checker)
++  optimum           the lightest feasible section in mass order; -1 = abstain (spec section 7)
++  monotonicity counter  two counts over the mask: c1 counts contexts where a lighter section is
++                        feasible while a heavier one below it is not; c2 counts contexts with an
++                        infeasible section between the optimum and the heuristic's trial section,
++                        and c2_block the same between the optimum and the first feasible section at
++                        or above the trial (the stretch the heuristic's downward walk must pass)
++  F1 horizon check  fewest F1 actions from the trial section to the optimum (mass step up/down,
++                    lightest section of the next deeper/shallower series; accept terminates and is
++                    not counted; no-ops past the ends cost a step but never shorten a path, so they
++                    are not edges), spec section 9, "Gate 3 verifies ... within 12 steps"
++  governing check   which utilisation limit acts at the optimum, from the checker's own
++                    Checker.check with the context's config applied (not a reimplementation)
++  alternatives      feasible sections within 5 % of the optimal mass, and of those the ones
++                    differing in depth by at least 50 mm (spec section 9 diversity counts)
++
++The module reads the verified Checker and the unchanged baselines (baselines.trial_index); nothing
++here trains, changes the checker, or changes the physics, objective or assumptions.
++"""
++import numpy as np
++
++from .baselines import trial_index
++from .context import DEFLECTION_RULES
++
++HORIZON_F1 = 12  # F1 horizon in steps (spec section 9); the check is a result, never changed here
++
++
++def f1_distances(series, h):
++    """All-pairs fewest-F1-action counts over the catalogue: d[i, j] is the smallest number of
++    actions (mass step up/down, move to the lightest section of the next strictly deeper or
++    strictly shallower series) that take the section pointer from i to j. `series` are the
++    catalogue's series designations ("457x191"), `h` the section depths in mm; series are ordered
++    by (depth, first mass-order index). Returns an int array (n, n) with d[i, i] = 0."""
++    n = len(series)
++    first_of = {}
++    for i, s in enumerate(series):
++        first_of.setdefault(s, i)
++    order = sorted(first_of, key=lambda s: (h[first_of[s]], first_of[s]))
++    depth = {s: h[first_of[s]] for s in order}
++    next_deeper, prev_shallower = {}, {}
++    for k, s in enumerate(order):
++        deeper = [s2 for s2 in order[k + 1:] if depth[s2] > depth[s]]
++        shallower = [s2 for s2 in order[:k] if depth[s2] < depth[s]]
++        next_deeper[s] = first_of[deeper[0]] if deeper else None
++        prev_shallower[s] = first_of[shallower[-1]] if shallower else None
++    adj = [[] for _ in range(n)]
++    for i, s in enumerate(series):
++        if i > 0:
++            adj[i].append(i - 1)
++        if i < n - 1:
++            adj[i].append(i + 1)
++        for j in (next_deeper[s], prev_shallower[s]):
++            if j is not None:
++                adj[i].append(j)
++    D = np.full((n, n), n, dtype=int)  # larger than any real distance (the graph is connected)
++    for start in range(n):
++        dist = np.full(n, n, dtype=int)
++        dist[start] = 0
++        frontier = [start]
++        while frontier:
++            next_frontier = []
++            for u in frontier:
++                for v in adj[u]:
++                    if dist[v] > dist[u] + 1:
++                        dist[v] = dist[u] + 1
++                        next_frontier.append(v)
++            frontier = next_frontier
++        D[start] = dist
++    return D
++
++
++def monotonicity(ok, opt, t):
++    """The P9 monotonicity counter for one feasible context (opt >= 0): c1 = a lighter section is
++    feasible while a heavier one below it is not (any pair, plus the adjacent-edge count c1_edges);
++    c2 = an infeasible section lies strictly between the optimum and the trial section (the patch
++    plan's phrasing); c2_block = the same between the optimum and the first feasible section at or
++    above the trial, which is exactly the stretch the heuristic's downward walk must pass (c2_block
++    = 0 means the feasible block from the optimum up to the walk start is contiguous, so the walk
++    reaches the optimum structurally)."""
++    j0 = int(np.argmax(ok[t:])) + t if ok[t:].any() else len(ok)
++    return {
++        "c1": int(np.triu(ok[:, None] & ~ok[None, :], 1).any()),
++        "c1_edges": int((ok[:-1] & ~ok[1:]).sum()),
++        "c2": int((~ok[opt + 1:t]).any()),
++        "c2_block": int((~ok[opt + 1:j0]).any()),
++        "walk_start": j0,
++    }
++
++
++def diagnose(checker, ctx, f1_d, e=None):
++    """One context's P9 diagnostics: feasibility mask, optimum, trial index, F1 distance from the
++    trial to the optimum, the monotonicity counter, alternatives, and the governing check of the
++    optimum from the checker's own Checker.check with the context's config applied. `f1_d` is
++    f1_distances(checker.cat.series, checker.h); `e` is an optional earlier evaluate_context result
++    (the enumeration pass) so the context is not evaluated twice. Abstain contexts (no optimum)
++    report opt = -1 and skip the optimum-dependent fields."""
++    if e is None:
++        e = checker.evaluate_context(ctx)
++    ok = e["feasible"]
++    opt = int(np.argmax(ok)) if ok.any() else -1
++    out = {"opt": opt, "n_feasible": int(ok.sum())}
++    if opt < 0:
++        return out
++    t = trial_index(checker, ctx)
++    out.update({"trial": t, "f1_distance": int(f1_d[t, opt])})
++    out.update(monotonicity(ok, opt, t))
++    m_opt = checker.mass[opt]
++    within5 = ok & (checker.mass <= 1.05 * m_opt)
++    out["n_within5"] = int(within5.sum())
++    out["n_depth50"] = int((within5 & (np.abs(checker.h - checker.h[opt]) >= 50.0)).sum())
++    w, phi = ctx.factored_udl(checker.cfg.gamma_G, checker.cfg.gamma_Q)
++    mode, ratio = DEFLECTION_RULES[ctx.deflection_rule]
++    Kc = checker.with_config(variable_share=phi, restraint_ratio=ctx.restraint_ratio,
++                             deflection_load=mode, deflection_ratio=ratio)
++    cr = Kc.check(ctx.span, w, opt)
++    out["governing"] = cr.governing
++    out["u_opt"] = cr.max_utilisation
++    return out
+diff --git a/src/ub_rl/reward_checks.py b/src/ub_rl/reward_checks.py
+new file mode 100644
+index 0000000..1d9d5e0
+--- /dev/null
++++ b/src/ub_rl/reward_checks.py
+@@ -0,0 +1,126 @@
++"""P9 reward families and the per-context ordering assertion (spec sections 9 and 12, change 5).
++
++One line per family (all rewards use log-mass, so a difference equals a relative mass gap; every
++arithmetic step is float64 log-space and nothing is exponentiated):
++  R1  terminal-sparse: accepting a feasible section gives -ln(m/m_trial), an infeasible one
++      -ln(m_max/m_trial) - 1, plus a step cost 0.001 per step
++  R2  potential-based shaping on R1: F = Phi(s') - Phi(s) with Phi = -ln(m/m_trial)
++      - 2*max(0, max utilisation - 1), Phi(terminal) = 0, discount 1, so the shaped return is the
++      R1 return minus the context-constant Phi(s0)
++  R3  reward-proportional (F2): log R = -beta*ln(m/m_trial) if feasible, else
++      -beta*ln(m_max/m_trial) - 10; beta in {25, 50, 100}, selected on V
++  R-C Lagrangian: the environment reward is R1 unchanged (the penalty lambda*c enters the training
++      loss, not the reward); feasibility is judged on verified output, never on the penalised objective
++  R-D call-penalized: R1 with step cost kappa per checker call, kappa*N_max <= 0.5 with N_max the
++      maximum calls per episode, so the margin of 1 is preserved
++
++Ordering property asserted (spec section 9 "A check asserts ...", Gate 3 of section 12): for every
++validation context and every family, the smallest return over all feasible candidates exceeds the
++largest return over all infeasible candidates (strictly, in float64). A candidate is a
++(section, calls used) pair with calls in [0, N_MAX] (the spec's own worst case: "with at most 12
++steps the total step cost is at most 0.012"); R3 candidates carry no step cost. A context with no
++feasible candidate or no infeasible candidate makes the assertion vacuous and is counted, not
++failed. This module needs enumeration feasibility only: no training, no RL. The constants (beta,
++kappa, N_MAX) are frozen at Gate 4; here the family property is asserted over their admissible
++ranges.
++"""
++import numpy as np
++
++from .baselines import trial_index
++
++REWARD_FAMILIES = ("R1", "R2", "R3", "R-C", "R-D")
++N_MAX = 12                # F1 horizon in steps (spec section 9): the maximum calls per episode
++STEP_COST_R1 = 0.001      # R1 step cost per step (spec section 9)
++KAPPA_RD = 0.5 / N_MAX    # R-D boundary of its admissible range kappa*N_max <= 0.5 (spec change 5)
++R3_BETAS = (25, 50, 100)  # R3 inverse temperatures, selected on V (spec section 9)
++
++
++def margin_bound(family, beta=None):
++    """Analytic lower bound of (min feasible return - max infeasible return) per family, from the
++    definitions in spec section 9 and change 5 (the observed margin is the bound plus
++    ln(m_max / m_heaviest_feasible) >= 0)."""
++    if family == "R3":
++        return 10.0
++    if family == "R-D":
++        return 1.0 - KAPPA_RD * N_MAX
++    return 1.0 - STEP_COST_R1 * N_MAX  # R1, R2, R-C
++
++
++def _keys():
++    return [f for f in REWARD_FAMILIES if f != "R3"] + [f"R3-b{b}" for b in R3_BETAS]
++
++
++def context_ordering(lnm, ok, u_trial, ln_trial, ln_max):
++    """Per-family (min feasible return, max infeasible return, margin) for one context. lnm is
++    np.log of the section masses in kg/m (float64), ok the feasibility mask, u_trial the trial
++    section's maximum utilisation (for R2's Phi(s0)), ln_trial and ln_max the log masses of the
++    F1 trial section and the heaviest section of C. Returns None when the assertion is vacuous
++    (no feasible candidate or no infeasible candidate). The step-cost term uses the worst case:
++    calls = N_MAX on the feasible side, calls = 0 on the infeasible side."""
++    if not (ok.any() and (~ok).any()):
++        return None
++    ln_hf = float(lnm[ok].max())  # heaviest feasible section: the worst feasible terminal reward
++    out = {}
++    # R1 / R-C: -ln(m/m_trial) feasible, -ln(m_max/m_trial) - 1 infeasible, step cost 0.001 per step.
++    for fam in ("R1", "R-C"):
++        min_f = -(ln_hf - ln_trial) - STEP_COST_R1 * N_MAX
++        max_i = -(ln_max - ln_trial) - 1.0 - STEP_COST_R1 * 0.0
++        out[fam] = (min_f, max_i, min_f - max_i)
++    # R2: shaped return = R1 return - Phi(s0) with Phi(s0) = -2*max(0, u_trial - 1); the shift is
++    # context-constant, so the ordering carries over (computed numerically in float64).
++    phi0 = -2.0 * max(0.0, u_trial - 1.0)
++    min_f, max_i, _ = out["R1"]
++    out["R2"] = (min_f - phi0, max_i - phi0, (min_f - phi0) - (max_i - phi0))
++    # R3: log R = -beta ln(m/m_trial) feasible, -beta ln(m_max/m_trial) - 10 infeasible, no step cost.
++    for beta in R3_BETAS:
++        b = float(beta)
++        min_f = -b * (ln_hf - ln_trial)
++        max_i = -b * (ln_max - ln_trial) - 10.0
++        out[f"R3-b{beta}"] = (min_f, max_i, min_f - max_i)
++    # R-D: R1 with step cost kappa per checker call, kappa*N_max <= 0.5.
++    min_f = -(ln_hf - ln_trial) - KAPPA_RD * N_MAX
++    max_i = -(ln_max - ln_trial) - 1.0 - KAPPA_RD * 0.0
++    out["R-D"] = (min_f, max_i, min_f - max_i)
++    return out
++
++
++def assert_ordering(checker, contexts):
++    """Assert, for every given (validation) context and every family, that the smallest feasible
++    candidate return exceeds the largest infeasible candidate return, in float64 log-space.
++    Feasibility comes from one enumeration pass per context over the checker's catalogue. Returns
++    a report dict with one row per family (R3 one row per beta); raises AssertionError on any
++    violation of the strict ordering or of the analytic margin bound."""
++    lnm = np.log(np.asarray(checker.mass, dtype=np.float64))
++    ln_max = float(lnm[-1])
++    rows = []
++    for family in REWARD_FAMILIES:
++        for beta in (R3_BETAS if family == "R3" else (None,)):
++            rows.append({"family": family, "beta": "" if beta is None else str(beta),
++                         "key": f"{family}-b{beta}" if beta is not None else family,
++                         "n": 0, "n_nonvacuous": 0, "n_vacuous": 0,
++                         "min_margin": float("inf"), "max_margin": float("-inf"),
++                         "margin_bound": margin_bound(family, beta), "violations": 0})
++    for ctx in contexts:
++        e = checker.evaluate_context(ctx)
++        t = trial_index(checker, ctx)
++        r = context_ordering(lnm, e["feasible"], float(e["U"][t].max()), float(lnm[t]), ln_max)
++        for row in rows:
++            row["n"] += 1
++            if r is None:
++                row["n_vacuous"] += 1
++                continue
++            _, _, margin = r[row["key"]]
++            row["n_nonvacuous"] += 1
++            row["min_margin"] = min(row["min_margin"], margin)
++            row["max_margin"] = max(row["max_margin"], margin)
++            if not margin > 0.0:
++                row["violations"] += 1
++    bad = []
++    for row in rows:
++        holds = row["n_nonvacuous"] == 0 or row["min_margin"] >= row["margin_bound"] - 1e-9
++        row["pass"] = int(row["violations"] == 0 and holds)
++        if row["violations"] or not holds:
++            bad.append(row)
++    if bad:
++        raise AssertionError(f"reward ordering violated: {bad}")
++    return {"n_contexts": len(contexts), "rows": rows}
+diff --git a/tests/test_landscape.py b/tests/test_landscape.py
+new file mode 100644
+index 0000000..c3f5eb0
+--- /dev/null
++++ b/tests/test_landscape.py
+@@ -0,0 +1,143 @@
++"""P9: landscape diagnostics — monotonicity counters, the F1 horizon check, alternatives and the
++governing check at the optimum (spec sections 9 and 12; patch plan P9). Synthetic masks and graphs
++test the counting and the action graph exactly; sampled split contexts test against the verified
++checker. Skips without the workbook (conftest).
++"""
++from pathlib import Path
++
++import numpy as np
++import pytest
++
++from ub_rl import splits as S
++from ub_rl.checker import CHECKS, Checker
++from ub_rl.landscape import diagnose, f1_distances, monotonicity
++
++ROOT = Path(__file__).resolve().parent.parent
++FILES = ["train", "val", "test_t1", "test_t2", "test_t3", "test_t4", "test_t5", "v12_substudy", "reference"]
++
++
++@pytest.fixture(scope="module")
++def K(C):
++    return Checker(C)
++
++
++@pytest.fixture(scope="module")
++def sample_contexts():
++    out = []
++    for name in FILES:
++        _, ctxs = S.load_split(name, root=ROOT / "data" / "splits")
++        out.extend(ctxs[:10])
++    return out
++
++
++@pytest.fixture(scope="module")
++def f1_d(K):
++    return f1_distances(K.cat.series, K.h)
++
++
++# ---------------------------------------------------------------- the monotonicity counter
++def test_clean_feasible_block_has_zero_counters():
++    ok = np.array([False, False, True, True, True, True, True, True, True, True])
++    r = monotonicity(ok, opt=2, t=6)
++    assert r["c1"] == r["c1_edges"] == r["c2"] == r["c2_block"] == 0
++    assert r["walk_start"] == 6  # the trial itself is feasible
++
++
++def test_dip_above_the_trial_counts_c1_but_not_c2():
++    ok = np.array([False, True, True, True, True, True, True, True, False, True])
++    r = monotonicity(ok, opt=1, t=6)
++    assert r["c1"] == 1 and r["c1_edges"] == 1  # section 8 infeasible below feasible ones
++    assert r["c2"] == 0 and r["c2_block"] == 0  # nothing between the optimum and the walk start
++
++
++def test_infeasible_section_between_optimum_and_trial_counts_c2():
++    ok = np.array([False, False, False, True, False, True, True, True, True, True])
++    r = monotonicity(ok, opt=3, t=8)
++    assert r["c2"] == 1 and r["c2_block"] == 1  # section 4 blocks the downward walk
++    assert r["c1"] == 1 and r["c1_edges"] == 1
++
++
++def test_infeasible_trial_extends_the_walk_region_to_the_first_feasible_section():
++    ok = np.array([False, False, False, True, True, False, True, True, True, True])
++    r = monotonicity(ok, opt=3, t=5)  # the trial (5) is infeasible; the walk starts at 6
++    assert r["walk_start"] == 6
++    assert r["c2"] == 0  # section 4 (between the optimum and the trial) is feasible, so no dip
++    assert r["c2_block"] == 1  # but the infeasible trial itself blocks the walk down from 6:
++    # the walk stops at 6 and cannot reach the optimum 3 — the plan phrasing (c2) stops at the
++    # trial and misses this case, which is why both counts are reported
++
++
++def test_trial_lighter_than_optimum_has_empty_between_regions():
++    ok = np.array([False, False, True, True, True, True, True, True, True, True])
++    r = monotonicity(ok, opt=2, t=0)  # the trial is lighter than the optimum (fallback never used)
++    assert r["c2"] == 0 and r["c2_block"] == 0 and r["walk_start"] == 2
++
++
++# ---------------------------------------------------------------- the F1 action graph
++def test_f1_distances_on_a_synthetic_catalogue():
++    series = ["A1", "A1", "A2", "A2", "B1", "B1"]
++    h = np.array([100.0, 100.0, 100.0, 100.0, 200.0, 200.0])
++    d = f1_distances(series, h)
++    assert d.shape == (6, 6) and d.dtype == int
++    assert (np.diag(d) == 0).all()
++    assert d[0, 1] == 1 and d[0, 4] == 1  # mass step and series jump to the next deeper series
++    assert d[0, 5] == 2 and d[0, 2] == 2  # A2 is not a direct deeper-series target of A1
++    assert d[0, 3] == 2  # 0 -> 4 (deeper series) -> 3 (one mass step down)
++    assert d[4, 2] == 1  # jump to the lightest shallower series (A2, depth 100 < 200)
++    assert d[5, 0] == 3
++
++
++def test_f1_distances_on_the_catalogue_are_shortest_paths(K, f1_d):
++    n = K.n
++    assert f1_d.shape == (n, n)
++    assert (np.diag(f1_d) == 0).all() and (f1_d >= 0).all()
++    assert (f1_d < n).all()  # the mass edges connect every section in both directions
++    for i in range(n):
++        for j in range(n):
++            assert f1_d[i, j] <= abs(i - j)  # the mass walk is always available
++            assert (f1_d[i, j] == 0) == (i == j)
++    # triangle inequality of shortest paths (the series jumps are directed, symmetry is not required)
++    rng = np.random.default_rng(7)
++    for _ in range(50):
++        i, j, k = rng.integers(0, n, 3)
++        assert f1_d[i, j] <= f1_d[i, k] + f1_d[k, j]
++
++
++def test_series_jump_reaches_any_section_in_its_series(K, f1_d):
++    first = {}
++    for i, s in enumerate(K.cat.series):
++        first.setdefault(s, i)
++    for s, i0 in first.items():
++        assert f1_d[i0, i0] == 0
++        assert all(f1_d[i0, j] == 1 for j in range(i0 + 1, K.n)
++                   if K.cat.series[j] == s and j == i0 + 1)  # only the adjacent member is 1 step away
++
++
++# ---------------------------------------------------------------- per-context diagnostics
++def test_diagnose_agrees_with_the_checker_and_the_enumeration(K, sample_contexts, f1_d):
++    n_feasible = 0
++    for ctx in sample_contexts:
++        e = K.evaluate_context(ctx)
++        ok = e["feasible"]
++        opt = int(np.argmax(ok)) if ok.any() else -1
++        out = diagnose(K, ctx, f1_d, e=e)
++        assert out["opt"] == opt and out["n_feasible"] == int(ok.sum())
++        if opt < 0:
++            assert "trial" not in out
++            continue
++        n_feasible += 1
++        # the governing check and utilisation come from Checker.check with the context's config:
++        # they must agree with the U matrix of the enumeration pass
++        assert out["governing"] in CHECKS
++        assert out["u_opt"] == pytest.approx(float(e["U"][opt].max()), abs=1e-9)
++        assert 0 <= out["f1_distance"] <= abs(out["trial"] - opt)
++        assert out["f1_distance"] == 0 if out["trial"] == opt else out["f1_distance"] > 0
++        assert out["n_within5"] >= 1 and 0 <= out["n_depth50"] <= out["n_within5"]
++        assert out["c1"] in (0, 1) and out["c2_block"] in (0, 1)
++    assert n_feasible >= 1
++
++
++def test_diagnose_reuses_the_enumeration_pass(K, sample_contexts, f1_d):
++    for ctx in sample_contexts[:5]:
++        e = K.evaluate_context(ctx)
++        assert diagnose(K, ctx, f1_d, e=e) == diagnose(K, ctx, f1_d)  # e=None reruns, same result
+diff --git a/tests/test_p9_script.py b/tests/test_p9_script.py
+new file mode 100644
+index 0000000..43b3a88
+--- /dev/null
++++ b/tests/test_p9_script.py
+@@ -0,0 +1,86 @@
++"""P9 script smoke tests: a --limit sample run must write the runstore results with complete metas,
++the saturation table with V as the headline line, and a gate record naming every reward family. The
++hardcoded P7 snapshot in the script must equal the committed P7 run summary. Skips without the
++workbook (conftest) and without the P7 results directory (results/ is not committed).
++"""
++import csv
++import json
++import subprocess
++import sys
++from pathlib import Path
++
++import pytest
++
++ROOT = Path(__file__).resolve().parent.parent
++sys.path.insert(0, str(ROOT / "scripts"))
++
++import landscape_diagnostics as LD  # noqa: E402
++
++from ub_rl import runstore as RS  # noqa: E402
++
++
++@pytest.fixture(scope="module")
++def sample_run(tmp_path_factory, raw_path):
++    out = tmp_path_factory.mktemp("p9_sample")
++    r = subprocess.run(
++        [sys.executable, str(ROOT / "scripts" / "landscape_diagnostics.py"), raw_path,
++         "--limit", "2", "--out", str(out)],
++        capture_output=True, text=True, cwd=str(ROOT))
++    assert r.returncode == 0, r.stderr[-2000:]
++    return out
++
++
++def test_sample_run_writes_all_outputs(sample_run):
++    for name in ["p9_landscape.csv", "p9_horizon.csv", "p9_governing.csv", "p9_alternatives.csv",
++                 "p9_saturation.csv", "p9_rewards.csv"]:
++        assert (sample_run / "paper" / "tables" / name).exists()
++    assert (sample_run / "docs" / "gate3_record.md").exists()
++    assert (sample_run / "p9_summary.json").exists()
++    assert (sample_run / "p9_summary.json_meta.json").exists()
++    assert (sample_run / "p9_contexts_val.csv").exists()
++    assert (sample_run / "p9_contexts_val.csv_meta.json").exists()
++
++
++def test_saturation_csv_headline_line_is_val(sample_run):
++    with open(sample_run / "paper" / "tables" / "p9_saturation.csv", newline="", encoding="ascii") as f:
++        rows = list(csv.DictReader(f))
++    assert rows and rows[0]["set"] == "val"
++    assert {r["set"] for r in rows} == {"val", "train", "t1", "t2", "t3-E1", "t4-A", "t5", "s12-val", "ref"}
++
++
++def test_record_has_saturation_headline_and_family_rows(sample_run):
++    text = (sample_run / "docs" / "gate3_record.md").read_text(encoding="ascii")
++    pos = text.index("## Saturation (headline line: V)")
++    section = text[pos:text.index("## ", pos + 4)]
++    assert section.index("| val |") < section.index("| train |")
++    for family in ("R1", "R2", "R3", "R-C", "R-D", "R3-b100"):
++        assert family in text
++
++
++def test_runstore_metas_are_complete_and_validate(sample_run):
++    rows, meta = RS.load_results(sample_run / "p9_contexts_val.csv")
++    assert meta["status"] == "complete" and meta["n_contexts"] == 2
++    assert len(rows) == 2
++    assert meta["method"] == "p9_landscape"
++    summary_meta = json.loads((sample_run / "p9_summary.json_meta.json").read_text(encoding="ascii"))
++    assert summary_meta["status"] == "complete" and summary_meta["n_contexts"] == 18
++    summary = json.loads((sample_run / "p9_summary.json").read_text(encoding="ascii"))
++    assert summary["limit"] == 2 and summary["p7_snapshot_ok"] is False
++
++
++def test_horizon_table_flags_never_change_the_horizon(sample_run):
++    assert LD.HORIZON_F1 == 12  # the spec horizon; the script only reports, it never changes it
++    with open(sample_run / "paper" / "tables" / "p9_horizon.csv", newline="", encoding="ascii") as f:
++        rows = list(csv.DictReader(f))
++    assert "gt12" in rows[0] and "flag" in rows[0] and "share_gt12" in rows[0]
++    for r in rows:
++        assert int(r["gt12"]) == 0 or r["flag"].startswith("APPROVAL NEEDED")
++
++
++@pytest.mark.skipif(not (ROOT / "results" / "baselines1" / "run_summary.json").exists(),
++                    reason="P7 results directory not present (results/ is not committed)")
++def test_p7_snapshot_matches_the_committed_summary():
++    d = json.loads((ROOT / "results" / "baselines1" / "run_summary.json").read_text(encoding="ascii"))
++    for f in d["files"]:
++        expected = (f["n_feasible"], round(f["mean_calls"]["heuristic"], 3))
++        assert LD.EXPECTED_P7[f["file"]] == expected, f["file"]
+diff --git a/tests/test_reward_checks.py b/tests/test_reward_checks.py
+new file mode 100644
+index 0000000..7d9d817
+--- /dev/null
++++ b/tests/test_reward_checks.py
+@@ -0,0 +1,113 @@
++"""P9: reward families and the float64 log-space ordering assertion (spec sections 9 and 12).
++
++The assertion says: per validation context and per family (R1, R2, R3, R-C, R-D), the smallest
++return of any feasible candidate exceeds the largest return of any infeasible candidate. Synthetic
++masks test the analytic margins exactly; sampled val contexts test the assertion against the
++verified checker. Skips without the workbook (conftest).
++"""
++from pathlib import Path
++
++import numpy as np
++import pytest
++
++from ub_rl import reward_checks as RC
++from ub_rl import splits as S
++from ub_rl.checker import Checker
++
++ROOT = Path(__file__).resolve().parent.parent
++
++N = 10  # sections in the synthetic catalogue: masses 1..10 kg/m
++LNM = np.log(np.arange(1.0, N + 1.0, dtype=np.float64))
++LN_MAX = float(LNM[-1])
++
++
++@pytest.fixture(scope="module")
++def K(C):
++    return Checker(C)
++
++
++@pytest.fixture(scope="module")
++def val_contexts():
++    _, ctxs = S.load_split("val", root=ROOT / "data" / "splits")
++    return ctxs[:20]
++
++
++# ---------------------------------------------------------------- synthetic masks (no checker)
++def test_heaviest_feasible_margin_is_exactly_the_bound():
++    ok = np.array([False, False, True] + [True] * 7)  # heaviest section feasible -> ln(m_max/m_hf) = 0
++    r = RC.context_ordering(LNM, ok, 0.5, float(LNM[2]), LN_MAX)
++    bound_r1 = 1.0 - RC.STEP_COST_R1 * RC.N_MAX
++    for key in ("R1", "R2", "R-C"):
++        assert r[key][2] == pytest.approx(bound_r1, abs=1e-12)
++    assert r["R-D"][2] == pytest.approx(1.0 - RC.KAPPA_RD * RC.N_MAX, abs=1e-12)
++    for beta in RC.R3_BETAS:
++        assert r[f"R3-b{beta}"][2] == pytest.approx(10.0, abs=1e-12)
++
++
++def test_margin_adds_the_log_mass_ratio_of_the_heaviest_infeasible_to_the_heaviest_feasible():
++    ok = np.array([False, False, True, True, True, True, True, True, False, False])  # m_hf = 8, m_max = 10
++    r = RC.context_ordering(LNM, ok, 0.5, float(LNM[1]), LN_MAX)
++    gap = float(np.log(10.0 / 8.0))
++    assert r["R1"][2] == pytest.approx(1.0 + gap - RC.STEP_COST_R1 * RC.N_MAX, abs=1e-12)
++    assert r["R3-b25"][2] == pytest.approx(10.0 + 25.0 * gap, abs=1e-12)
++    assert r["R3-b100"][2] == pytest.approx(10.0 + 100.0 * gap, abs=1e-12)
++
++
++def test_r2_shift_is_context_constant_and_preserves_the_ordering():
++    ok = np.array([False, False, True, True, True, True, True, True, False, False])
++    r = RC.context_ordering(LNM, ok, 1.5, float(LNM[1]), LN_MAX)  # infeasible trial: Phi(s0) = -1.0
++    assert r["R2"][0] == pytest.approx(r["R1"][0] + 1.0, abs=1e-12)  # return shifted by -Phi(s0)
++    assert r["R2"][2] == pytest.approx(r["R1"][2], abs=1e-12)
++
++
++def test_vacuous_when_no_feasible_or_no_infeasible_candidate():
++    assert RC.context_ordering(LNM, np.ones(N, bool), 0.5, float(LNM[2]), LN_MAX) is None
++    assert RC.context_ordering(LNM, np.zeros(N, bool), 0.5, float(LNM[2]), LN_MAX) is None
++
++
++def test_all_values_finite_float64_log_space():
++    ok = np.array([False, False, True, True, True, True, True, True, False, False])
++    r = RC.context_ordering(LNM, ok, 1.5, float(LNM[1]), LN_MAX)
++    for key, (min_f, max_i, margin) in r.items():
++        for v in (min_f, max_i, margin):
++            assert isinstance(v, float) and np.isfinite(v)
++        assert margin > 0.0
++
++
++# ---------------------------------------------------------------- the assertion on val contexts
++def test_ordering_holds_on_sample_val_contexts(K, val_contexts):
++    report = RC.assert_ordering(K, val_contexts)
++    assert report["n_contexts"] == len(val_contexts)
++    for row in report["rows"]:
++        assert row["n"] == len(val_contexts)
++        assert row["n_nonvacuous"] + row["n_vacuous"] == len(val_contexts)
++        assert row["n_nonvacuous"] >= 1  # val has feasible contexts with infeasible sections
++        assert row["violations"] == 0 and row["pass"] == 1
++        assert row["min_margin"] >= row["margin_bound"] - 1e-9
++        assert row["max_margin"] >= row["min_margin"]
++
++
++def test_trial_mass_never_exceeds_the_heaviest_section(K, val_contexts):
++    from ub_rl.baselines import trial_index
++    for ctx in val_contexts:
++        t = trial_index(K, ctx)
++        assert 0 <= t < K.n
++        assert K.mass[t] <= K.mass[-1]
++
++
++def test_assert_ordering_raises_on_a_violation(K, val_contexts, monkeypatch):
++    def fake(lnm, ok, u_trial, ln_trial, ln_max):
++        return {key: (0.0, 0.0, -1.0 if key == "R1" else 1.0) for key in RC._keys()}
++
++    monkeypatch.setattr(RC, "context_ordering", fake)
++    with pytest.raises(AssertionError, match="reward ordering violated"):
++        RC.assert_ordering(K, val_contexts)
++
++
++def test_assert_ordering_raises_when_the_margin_is_below_the_bound(K, val_contexts, monkeypatch):
++    def fake(lnm, ok, u_trial, ln_trial, ln_max):
++        return {key: (0.0, 0.0, 0.5) for key in RC._keys()}  # positive but below every bound
++
++    monkeypatch.setattr(RC, "context_ordering", fake)
++    with pytest.raises(AssertionError, match="reward ordering violated"):
++        RC.assert_ordering(K, val_contexts)

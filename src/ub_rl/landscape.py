@@ -11,7 +11,7 @@ One line each:
   F1 horizon check  fewest F1 actions from the trial section to the optimum (mass step up/down,
                     lightest section of the next deeper/shallower series; accept terminates and is
                     not counted; no-ops past the ends cost a step but never shorten a path, so they
-                    are not edges), spec section 9, "Gate 3 verifies ... within 12 steps"
+                    are not edges), spec section 9, "Gate 3 verifies ... within 13 steps" (A3, amended from 12)
   governing check   which utilisation limit acts at the optimum, from the checker's own
                     Checker.check with the context's config applied (not a reimplementation)
   alternatives      feasible sections within 5 % of the optimal mass, and of those the ones
@@ -25,7 +25,7 @@ import numpy as np
 from .baselines import trial_index
 from .context import DEFLECTION_RULES
 
-HORIZON_F1 = 12  # F1 horizon in steps (spec section 9); the check is a result, never changed here
+HORIZON_F1 = 13  # F1 horizon in steps (spec section 9, amended 12 -> 13 by A3, 2026-11-11); the check is a result, never changed here
 
 
 def f1_distances(series, h):

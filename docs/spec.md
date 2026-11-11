@@ -111,7 +111,7 @@ Catalogue order: sections are indexed in mass-ascending order (ties: smaller h, 
 
 RL formulations (state includes normalised context):
 - F0 Direct choice (contextual bandit): the policy outputs a categorical distribution over C; one sampled section is checked per context (bandit feedback, one checker call per sample) and scored with R1 as an accepted section (no step cost). Greedy output = arg max probability.
-- F1 Refinement MDP: start from the trial section (first section in mass order with Wpl >= M_Ed/fy, using w and fy = 355). Observation: context, current section geometry and mass, utilisation of every check. Actions: one mass step up or down, move to the lightest section of the next deeper or shallower series, accept. A move past either end of the catalogue is a no-op that still costs a step. Horizon 12 steps; at step 12 the current section is accepted automatically. Gate 3 verifies on every split that the optimum lies within 12 steps of the trial section; otherwise the horizon is amended before training.
+- F1 Refinement MDP: start from the trial section (first section in mass order with Wpl >= M_Ed/fy, using w and fy = 355). Observation: context, current section geometry and mass, utilisation of every check. Actions: one mass step up or down, move to the lightest section of the next deeper or shallower series, accept. A move past either end of the catalogue is a no-op that still costs a step. Horizon 12 steps; at step 12 the current section is accepted automatically. Gate 3 verifies on every split that the optimum lies within 12 steps of the trial section; otherwise the horizon is amended before training. *(Amendment A3, 2026-11-11, before any RL run: the horizon is 13 steps — the largest F1 distance found by the P9 full run, needed by 17 contexts of T3; the original 12-step text above stays visible.)*
 - F2 Constructive MDP (GFlowNet): two choices, series then variant within the series. The choice graph is a tree, so F2 is equivalent to matching a hierarchical categorical distribution to R, and the paper says so. Greedy output = the section with the largest joint probability P(series)P(variant | series), computed exactly over C. One checker call per sampled section.
 
 Algorithms (PPO, SAC, TD3 and DDPG are not used):
@@ -120,7 +120,7 @@ Algorithms (PPO, SAC, TD3 and DDPG are not used):
 - F2: conditional GFlowNet, trajectory balance, with a learned log Z(context).
 
 Rewards use log-mass so a difference equals a relative mass gap. m_trial is the mass of the F1 trial section for the context; m_max is the heaviest section of C.
-- R1 Terminal-sparse: accepting a feasible section gives -ln(m/m_trial); accepting an infeasible section gives -ln(m_max/m_trial) - 1, strictly below every feasible value for that context; step cost 0.001. With at most 12 steps the total step cost is at most 0.012, below the margin of 1, so the ordering also holds for episode returns.
+- R1 Terminal-sparse: accepting a feasible section gives -ln(m/m_trial); accepting an infeasible section gives -ln(m_max/m_trial) - 1, strictly below every feasible value for that context; step cost 0.001. With at most 12 steps the total step cost is at most 0.012, below the margin of 1, so the ordering also holds for episode returns. *(Amendment A3, 2026-11-11: with at most 13 steps the total step cost is at most 0.013, still below the margin of 1, so the ordering also holds; the original sentence above stays visible.)*
 - R2 Potential-based shaping on R1: F = Phi(s') - Phi(s), Phi = -ln(m/m_trial) - 2*max(0, max utilisation - 1), Phi(terminal) = 0, discount 1.
 - R3 Reward-proportional (F2): log R(x) = -beta*ln(m/m_trial) if feasible; log R(x) = -beta*ln(m_max/m_trial) - 10 if infeasible. Every feasible section has a strictly higher log-reward than every infeasible one by construction (feasible: at least -beta*ln(m_max/m_trial); infeasible: that minus 10). The total sampling weight of infeasible sections is at most |C|*e^-10 (about 0.4%) of the optimum's weight; verification handles the remainder. All reward arithmetic is in float64 log-space. beta in {25, 50, 100}, selected on V.
 - A check asserts the strict feasible > infeasible ordering for every context in V and every candidate.
@@ -205,6 +205,7 @@ Defaults below are working assumptions, not approvals. Each item that changes th
 | Shear buckling eta | From the UK NA to EN 1993-1-5, to be read from the text | Decides whether any section needs the shear buckling check |
 | Extra context parameters (for example depth cap h <= h_max) | Not in the frozen study | Needs a design requirement and an amendment |
 | Construction-stage stability | Not checked | Out of scope, stated as a limitation |
+| F1 horizon | 12 steps (section 9) | Amended to 13 steps by A3 (2026-11-11); project lead approved, supervisor confirmation pending |
 
 ## Amendments
 
@@ -253,7 +254,7 @@ Governing narrative: `docs/proposal.md` (one journal paper). Status: **proposed,
    - S6 hybrid: warm-starting an optimizer from the policy reaches the same final mass with at least 30 % fewer optimizer evaluations than a cold start.
    - Stage 2 confirmatory family (at most four, Holm correction within Stage 2): P5 best RL vs best optimizer, mass gap (non-inferiority); P6 best RL vs best optimizer, calls per verified design; P7 best RL vs supervised policy trained on optimizer labels at matched calls, mass gap; P8 hybrid vs cold-start optimizer, evaluations.
    - Proposal section 7 maps to the specification as follows: "learning from feedback" is P2 (Stage 1); "expensive verification" is P1 with N* reported at 1 ms and 1 s per call (section 10); "custom sections" is S3 to S5 and P5 to P7; "hybrid" is S6 and P8.
-   - **Amendment A3 (patch P14) is required before any Stage 2 run** and must fix: the design variables and bounds, class and h/b limits, fabrication increments, the welded LTB parameters (UK NA: lambda_LT,0 = 0.2, beta = 1.0, curve c for h/b <= 2 and curve d for 2 < h/b <= 3.1, and how h/b > 3.1 is handled), the Stage 2 splits and baselines, and the budgets. A3 may add detail but may not weaken S3 to S6 or P5 to P8. Amendment A2 (patch P6) fixes the Stage 1 seven-parameter ranges and splits.
+   - **Amendment A4 (patch P14) is required before any Stage 2 run** and must fix: the design variables and bounds, class and h/b limits, fabrication increments, the welded LTB parameters (UK NA: lambda_LT,0 = 0.2, beta = 1.0, curve c for h/b <= 2 and curve d for 2 < h/b <= 3.1, and how h/b > 3.1 is handled), the Stage 2 splits and baselines, and the budgets. A4 may add detail but may not weaken S3 to S6 or P5 to P8. Amendment A2 (patch P6) fixes the Stage 1 seven-parameter ranges and splits. Amendment A3 (patch P9) fixes the F1 horizon.
 
 7. **Web bearing, two valid solutions:** `CheckerConfig.bearing_rule` = `higher` (default; SCI AD 378 and the Blue Book tables) or `sequential` (EN text order, lower resistance for 6 sections). The default is unchanged. `sequential` is a pre-registered sensitivity.
 8. **Gate 2 artefacts added:** a second implementation of the non-LTB checks, public SCI benchmarks, generated verification cases, and a Blue Book comparison script (see the verification record). They do not change any assumption.
@@ -346,4 +347,14 @@ T4-B is interpolation in restraint: 0 and 1 are the ends of the allowed set and 
 
 **Result files.** `results/audit/labels_<file>.csv` (not committed) hold the enumeration optimum per context; each has `labels_<file>_meta.json` with the commit, the SHA-256 of the environment file (`src/ub_rl/checker.py`; also context, config, splits and script), the catalogue SHA-256 and the split SHA-256. Until environments exist (P10) the checker is the environment file.
 
-**Not done here** (later patches): the F1 horizon check (optimum within 12 steps of the trial section), landscape diagnostics and saturation (P9), baselines (P7, P8).
+**Not done here** (later patches): the F1 horizon check (optimum within 13 steps of the trial section, amended by A3 from 12), landscape diagnostics and saturation (P9), baselines (P7, P8).
+
+### Amendment A3 (2026-11-11, before any RL run): F1 horizon 13 steps (patch P9)
+
+Status: recorded before any RL run, after the P9 full-run horizon check. The project lead approved amending the horizon on 2026-11-11; **supervisor confirmation is pending** (section 15).
+
+Background: the P9 full run (`paper/tables/p9_horizon.csv`, committed) found 17 feasible contexts whose optimum lies more than 12 F1 steps from the trial section, all in T3 (E1: 4 of 194, E2: 1 of 304, E3: 12 of 111), and a largest F1 distance of 13 steps anywhere. Section 9 says the horizon is amended before training in exactly this case.
+
+Change: wherever this specification says the F1 horizon is 12 steps, it now reads 13 steps (the sentences in section 9 keep their original text visible, with the amendment noted next to them). The new horizon H = 13 is the largest F1 distance from the trial section to the optimum observed over all 34,841 contexts; 17 contexts need exactly 13. Consequences, checked in code (`src/ub_rl/reward_checks.py`, `src/ub_rl/landscape.py`): R1 keeps its step cost 0.001, the total step cost is at most 13 x 0.001 = 0.013, below the margin of 1, so the feasible-over-infeasible ordering still holds (R1/R2/R-C margin bound 1 - 0.013 = 0.987); R-D keeps kappa = 0.5 / 13, so kappa x N_max = 0.5 exactly, meeting kappa x N_max <= 0.5 with equality. No physics, checker, objective or split is changed. The horizon check in `scripts/landscape_diagnostics.py` now uses HORIZON_F1 = 13; the P9 tables and the Gate 3 record are regenerated by the full rerun.
+
+Amendment name: the name A3 was reserved for the Stage 2 amendment (patch P14) in section 12; that reservation moves to A4.
