@@ -15,10 +15,11 @@ pip install -e ".[test]"
 
 | Command | What it does | Good result |
 |---|---|---|
-| `python -m pytest -q` | Runs all automatic tests of the checker, the parser, the splits and the Stage 1 baselines. About a minute (machine-dependent). | `174 passed` (with the workbooks present) |
+| `python -m pytest -q` | Runs all automatic tests of the checker, the parser, the splits and the Stage 1 baselines. About a minute (machine-dependent). | `175 passed` (with the workbooks present) |
 | `python scripts/reference_case.py` | Designs one beam for the reference floor (9 m span) and prints the checks. | first line ends `lightest feasible = 457x191x74` |
 | `python scripts/context_audit.py --check` | Rebuilds every split file and audit table in a temporary folder and compares them with the committed files. A few minutes. | `differing or missing: none` |
 | `python scripts/run_baselines1.py` | Runs the four Stage 1 baselines (enumeration, ordered scan, heuristic iteration, random search) over all 34,841 split contexts and stores every design in `results/baselines1/`. Single-threaded, about 50 minutes. `--limit N` is a quick smoke run. | last line `enumeration == ordered scan on every context: True` |
+| `python scripts/baselines1_summary.py` | Prints, for every set, how often the heuristic and each random-search budget reach the optimum, wrongly abstain, and their mean gap (reads `results/baselines1/`). A few seconds. | 54 lines; random search at budget 91 always shows mean gap 0.000% and 0 false abstentions |
 
 If `pytest` reports many `skipped`, the workbooks are not in `data/raw/`.
 

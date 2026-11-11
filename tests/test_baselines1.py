@@ -292,3 +292,20 @@ def test_rewriting_removes_the_old_meta_first(tmp_path):
         write_results(p, Boom(), ["id"], _meta(tmp_path))
     with pytest.raises(ResultStoreError, match="without its meta file"):
         load_results(p)
+
+
+def test_baselines1_summary_script_reads_the_store(tmp_path, raw_path):
+    out = tmp_path / "b1"
+    run = subprocess.run([sys.executable, str(ROOT / "scripts" / "run_baselines1.py"), str(raw_path), "--limit", "3",
+                          "--out", str(out)], capture_output=True, text=True, cwd=ROOT)
+    assert run.returncode == 0, run.stdout + run.stderr
+    summ = subprocess.run([sys.executable, str(ROOT / "scripts" / "baselines1_summary.py"), str(out)],
+                          capture_output=True, text=True, cwd=ROOT)
+    assert summ.returncode == 0, summ.stderr
+    lines = summ.stdout.splitlines()
+    assert len(lines) == 9 * 5  # per set: heuristic + 4 random budgets
+    assert all("random    budget  91" not in ln or "mean gap   0.000%" in ln for ln in lines)
+    (out / "heuristic_val.csv_meta.json").unlink()
+    bad = subprocess.run([sys.executable, str(ROOT / "scripts" / "baselines1_summary.py"), str(out)],
+                         capture_output=True, text=True, cwd=ROOT)
+    assert bad.returncode != 0 and "without its meta file" in bad.stderr

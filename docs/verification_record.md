@@ -169,3 +169,29 @@ Written by Claude (AI assistant) for the project lead; patch on top of commit `c
 3. **Result store.** `write_results` now records `result_sha256` and `n_rows` in the meta file and removes an old meta file before rewriting; `load_results` rejects a CSV that differs from the recorded hash or row count.
 
 Tests: 7 new (random order stable, per seed and context, nested; heuristic never evaluates a section twice; edited CSV, wrong row count and interrupted rewrite rejected). Run by Claude on a clone of `review` at `c99614a`: `python -m pytest -q` reported `174 passed` (167 + 7); `python scripts/run_baselines1.py --limit 100` reported `enumeration == ordered scan on every context: True` and wrote 36 result files. The full run is for the project lead.
+
+## P7: full run on every split file (2026-11-11)
+
+Run by the project lead (machine in `results/baselines1/*_meta.json`) on `review` with P7b applied: `python scripts/run_baselines1.py`, then `python scripts/gap_summary.py results/baselines1` (the same table is printed by `scripts/baselines1_summary.py`). Numbers below are copied from the two printed outputs; Claude did not run this.
+
+**Acceptance criteria met.** 34,841 contexts; `enumeration == ordered scan on every context: True`; calls logged per design; 36 result files each with its meta file. Feasible and abstain counts per set equal `paper/tables/audit_sets.csv` (train 16,723 / 3,277; val 796 / 204; T1 1,635 / 365; T2 388 / 112; T3 609 / 891; T4 1,404 / 96; T5 3,102 / 735; v1.2 sub-study 4,500 / 0; reference 4 / 0).
+
+**Mean checker calls per context** (enumeration 91 everywhere; random search 42.75 = mean of budgets 10, 20, 50, 91):
+
+| Set | Ordered scan | Heuristic |
+|---|---|---|
+| train | 63.24 | 13.55 |
+| val | 64.24 | 14.19 |
+| T1 | 63.56 | 13.74 |
+| T2 | 66.77 | 15.30 |
+| T3 | 81.92 | 19.23 |
+| T4 | 59.57 | 9.88 |
+| T5 | 63.91 | 13.86 |
+| v1.2 sub-study | 57.34 | 2.42 |
+| reference | 45.75 | 8.75 |
+
+**Heuristic iteration reaches the optimum in every context where a feasible section exists, in every set** (29,161 of 29,161: gap 0, no false abstention). It abstains exactly where enumeration abstains.
+
+**Random search** (10 seeds per context), over the eight sets other than reference: mean gap 25.1 to 36.2 % at budget 10, 14.3 to 16.1 % at 20, 3.9 to 5.1 % at 50, and 0 at 91 (the whole catalogue). Wrong abstentions on train (167,230 seed runs in contexts with a feasible section): 58,150 (34.8 %) at budget 10, 35,460 (21.2 %) at 20, 12,912 (7.7 %) at 50, 0 at 91.
+
+**Meaning for the project.** On catalogue C with these contexts the conventional heuristic leaves no quality gap, so a learned selector cannot improve on it in mass or feasibility; any benefit has to be in checker calls or in behaviour outside what the heuristic covers. This is a Stage 1 result. It changes no physics, objective or assumption; how it is reported and what it implies for the comparison is the saturation analysis of P9.
