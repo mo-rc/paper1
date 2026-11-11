@@ -184,12 +184,10 @@ def main():
             # (recorded in the meta, not assumed silently).
             for budget in baselines.RANDOM_BUDGETS[:-1]:
                 for seed in baselines.RANDOM_SEEDS:
-                    rng = np.random.default_rng(seed)  # fresh per context: deterministic, order-independent
-                    fn = lambda k, c, b=budget, g=rng: baselines.random_search(k, c, b, g)
+                    fn = lambda k, c, b=budget, sd=seed, cid=r["id"]: baselines.random_search(k, c, b, sd, cid)
                     res, wall, vc, ver = run_method(kc, ctx, fn)
                     out.append(row_of(kc, r, "random", str(seed), str(budget), res, vc, wall, mref, ver))
-            rng = np.random.default_rng(0)  # any seed: the full permutation covers every section
-            res, wall, vc, ver = run_method(kc, ctx, lambda k, c, b=n, g=rng: baselines.random_search(k, c, b, g))
+            res, wall, vc, ver = run_method(kc, ctx, lambda k, c, b=n, cid=r["id"]: baselines.random_search(k, c, b, 0, cid))
             if (res.status, res.index) != (res_enum.status, res_enum.index):
                 raise SystemExit(f"random search budget |C| != enumeration on context {r['id']}")
             for seed in baselines.RANDOM_SEEDS:

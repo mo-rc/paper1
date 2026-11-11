@@ -8,6 +8,7 @@ A result file whose meta file is missing or whose status is not "complete" is re
 `limit_threads()` sets the BLAS/OpenMP thread env vars to 1 before numpy is imported; `hardware_info()`
 records what the machine is. Generated results are never committed (`results/` is ignored)."""
 import csv
+import hashlib
 import json
 import os
 import platform
@@ -21,6 +22,9 @@ class ResultStoreError(Exception):
 
 REQUIRED_META = ("status", "method", "commit", "environment_file", "environment_sha256", "catalogue_sha256",
                  "split_file", "split_sha256", "n_contexts")
+
+# Added by write_results and checked by load_results: the CSV cannot be edited or swapped without being noticed.
+INTEGRITY_META = ("result_sha256", "n_rows")
 
 THREAD_ENV_VARS = ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "NUMEXPR_NUM_THREADS",
                    "VECLIB_MAXIMUM_THREADS", "BLIS_NUM_THREADS")
@@ -85,17 +89,28 @@ def write_meta(path, meta):
         f.write("\n")
 
 
+def _sha256(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
 def write_results(path, rows, columns, meta):
     """Write a result CSV and its meta sidecar together. The meta must already carry `status: "complete"` and
-    every REQUIRED_META key."""
+    every REQUIRED_META key; `result_sha256` and `n_rows` of the written CSV are added here. An old meta file is
+    removed first, so an interrupted write never leaves a new CSV next to a stale meta file."""
     path = Path(path)
     _check_meta(path, meta)
     path.parent.mkdir(parents=True, exist_ok=True)
+    Path(meta_name(path)).unlink(missing_ok=True)
+    rows = list(rows)
     with open(path, "w", newline="", encoding="ascii") as f:
         wr = csv.DictWriter(f, fieldnames=columns, lineterminator="\n")
         wr.writeheader()
         wr.writerows(rows)
-    write_meta(path, meta)
+    write_meta(path, dict(meta, result_sha256=_sha256(path), n_rows=len(rows)))
 
 
 def load_results(path):
@@ -111,6 +126,13 @@ def load_results(path):
     for key in REQUIRED_META:
         if key not in meta:
             raise ResultStoreError(f"{path.name} is rejected: meta is missing required key {key!r}")
+    for key in INTEGRITY_META:
+        if key not in meta:
+            raise ResultStoreError(f"{path.name} is rejected: meta is missing {key!r}")
+    if _sha256(path) != meta["result_sha256"]:
+        raise ResultStoreError(f"{path.name} is rejected: the file differs from the SHA-256 in its meta file")
     with open(path, newline="", encoding="ascii") as f:
         rows = list(csv.DictReader(f))
+    if len(rows) != meta["n_rows"]:
+        raise ResultStoreError(f"{path.name} is rejected: {len(rows)} rows, meta says {meta['n_rows']}")
     return rows, meta

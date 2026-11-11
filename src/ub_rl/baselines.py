@@ -16,12 +16,14 @@ Method definitions (spec section 9):
   heuristic       trial section = first section in mass order with Wpl >= M_Ed / 355 (w = superimposed
                   factored UDL, fy = 355), step up in mass order until feasible, then down while the
                   next-lighter section stays feasible (conventional manual design)
-  random search   a fixed number (budget) of distinct sections drawn uniformly without replacement; the
+  random search   a fixed number (budget) of distinct sections, the first ones of a random order that is fixed per
+                  (seed, context) and does not depend on the NumPy version; the
                   lightest feasible among them is output. Budget |C| draws the whole catalogue, so it equals
                   enumeration; seeds then do not matter (recorded, not assumed silently).
 Feasibility is not monotone in mass order, so the heuristic and random search can return a feasible section
 heavier than the enumeration optimum; the gap is a result, not an assumption.
 """
+import random
 from dataclasses import dataclass
 
 import numpy as np
@@ -100,29 +102,45 @@ def trial_index(kc, ctx):
 
 def heuristic(kc, ctx):
     """Conventional manual design: trial section from the required modulus, up in mass order until feasible,
-    then down while the next-lighter section stays feasible (spec section 9)."""
+    then down while the next-lighter section stays feasible (spec section 9). A section already evaluated in this
+    context is remembered, not evaluated (and not counted) again."""
     c = _Calls(kc)
     n = len(kc)
+    seen = {}
+
+    def ok(i):
+        if i not in seen:
+            seen[i] = bool(kc.evaluate_context(ctx, [i])["feasible"][0])
+        return seen[i]
+
     j = trial_index(kc, ctx)
-    e = kc.evaluate_context(ctx, [j])
-    while not e["feasible"][0] and j < n - 1:
+    while not ok(j) and j < n - 1:
         j += 1
-        e = kc.evaluate_context(ctx, [j])
-    if e["feasible"][0]:
-        while j > 0:
-            if not kc.evaluate_context(ctx, [j - 1])["feasible"][0]:
-                break
+    if ok(j):
+        while j > 0 and ok(j - 1):
             j -= 1
         return MethodResult("feasible", j, c.calls())
     return MethodResult("abstain", -1, c.calls())
 
 
-def random_search(kc, ctx, budget, rng):
-    """`budget` distinct sections drawn uniformly without replacement; the lightest feasible among them is
+def random_order(n, seed, context_id):
+    """Fixed random order of the n sections for one (seed, context): Fisher-Yates driven by random.Random(...).random(),
+    so it does not depend on the NumPy version (the splits use the same device). Every context has its own order;
+    prefixes are nested (the sections of budget 10 are the first 10 of budget 20)."""
+    rng = random.Random(f"{seed}|{context_id}")
+    order = list(range(n))
+    for k in range(n - 1, 0, -1):
+        j = int(rng.random() * (k + 1))
+        order[k], order[j] = order[j], order[k]
+    return order
+
+
+def random_search(kc, ctx, budget, seed, context_id):
+    """The first `budget` sections of the (seed, context) random order are evaluated; the lightest feasible one is
     output, -1 if none. Budget |C| evaluates every section (equals enumeration for every seed)."""
     c = _Calls(kc)
     n = len(kc)
-    idx = rng.choice(n, size=min(budget, n), replace=False)
+    idx = np.array(random_order(n, seed, context_id)[:min(budget, n)], dtype=int)
     ok = idx[kc.evaluate_context(ctx, idx)["feasible"]]
     if len(ok):
         opt = int(ok.min())  # smallest mass-order position = lightest feasible section found

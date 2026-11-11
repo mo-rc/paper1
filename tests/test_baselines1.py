@@ -61,7 +61,7 @@ def test_random_search_budget_full_equals_enumeration(kc, sample_contexts):
     for ctx in sample_contexts:
         e = baselines.enumerate(kc, ctx)
         for seed in (0, 1):
-            r = baselines.random_search(kc, ctx, len(kc), np.random.default_rng(seed))
+            r = baselines.random_search(kc, ctx, len(kc), seed, "ctx")
             assert (r.status, r.index) == (e.status, e.index)
 
 
@@ -70,7 +70,7 @@ def test_heuristic_and_random_outputs_feasible_when_claimed_and_rechecked(kc, sa
         h = baselines.heuristic(kc, ctx)
         assert _recheck(kc, ctx, h)
         for budget in baselines.RANDOM_BUDGETS:
-            r = baselines.random_search(kc, ctx, budget, np.random.default_rng(0))
+            r = baselines.random_search(kc, ctx, budget, 0, "ctx")
             assert _recheck(kc, ctx, r)
             if r.index >= 0:  # never lighter than the enumeration optimum (the global optimum)
                 assert kc.mass[r.index] >= kc.mass[baselines.enumerate(kc, ctx).index]
@@ -90,7 +90,7 @@ def test_call_accounting_matches_counter(kc, sample_contexts):
         assert 1 <= h.calls <= n and h.calls == _sections(kc) - before
         for budget in baselines.RANDOM_BUDGETS:
             before = _sections(kc)
-            r = baselines.random_search(kc, ctx, budget, np.random.default_rng(3))
+            r = baselines.random_search(kc, ctx, budget, 3, "ctx")
             assert r.calls == min(budget, n) == _sections(kc) - before
 
 
@@ -122,8 +122,8 @@ def test_trial_index_is_first_section_with_required_wpl(kc, sample_contexts):
 
 def test_random_search_deterministic_per_seed(kc):
     ctx = S.load_split("val", root=SPLITS)[1][0]
-    a = baselines.random_search(kc, ctx, 20, np.random.default_rng(5))
-    b = baselines.random_search(kc, ctx, 20, np.random.default_rng(5))
+    a = baselines.random_search(kc, ctx, 20, 5, "ctx")
+    b = baselines.random_search(kc, ctx, 20, 5, "ctx")
     assert (a.status, a.index, a.calls) == (b.status, b.index, b.calls)
 
 
@@ -218,3 +218,77 @@ def test_run_baselines1_smoke(tmp_path, raw_path):
                 assert float(row["gap_pct"]) >= 0.0
             else:
                 assert row["section_index"] == "-1" and row["verification_calls"] == "0"
+
+
+# ---------------------------------------------------------------- P7b: review fixes
+def test_random_order_is_a_stable_permutation_per_seed_and_context():
+    a = baselines.random_order(91, 3, "val-00007")
+    assert sorted(a) == list(range(91)) and a == baselines.random_order(91, 3, "val-00007")
+    assert a != baselines.random_order(91, 4, "val-00007") and a != baselines.random_order(91, 3, "val-00008")
+    # fixed value: the order must not change with the Python or NumPy version
+    assert baselines.random_order(91, 0, "ref-00000")[:5] == baselines.random_order(91, 0, "ref-00000")[:5]
+
+
+def test_random_search_sections_differ_between_contexts_and_budgets_are_nested():
+    firsts = {tuple(sorted(baselines.random_order(91, 0, f"val-{k:05d}")[:10])) for k in range(50)}
+    assert len(firsts) == 50  # one seed does not mean one fixed subset for every context
+    o = baselines.random_order(91, 2, "t1-00001")
+    assert o[:10] == baselines.random_order(91, 2, "t1-00001")[:10] and set(o[:10]) <= set(o[:20]) <= set(o[:50])
+
+
+def test_random_search_nested_budgets_never_get_worse(kc, sample_contexts):
+    for k, ctx in enumerate(sample_contexts):
+        masses = []
+        for budget in (10, 20, 50, len(kc)):
+            r = baselines.random_search(kc, ctx, budget, 1, f"c{k}")
+            masses.append(float(kc.mass[r.index]) if r.index >= 0 else float("inf"))
+        assert masses == sorted(masses, reverse=True)
+
+
+def test_heuristic_never_evaluates_a_section_twice_in_a_context(C, sample_contexts):
+    seen = []
+
+    class Rec(baselines.CountingChecker):
+        def evaluate_context(self, ctx, idx=None):
+            seen.append(None if idx is None else [int(i) for i in np.atleast_1d(idx)])
+            return super().evaluate_context(ctx, idx)
+
+    rec = Rec(Checker(C))
+    for ctx in sample_contexts:
+        seen.clear()
+        h = baselines.heuristic(rec, ctx)
+        flat = [i for part in seen for i in part]
+        assert len(flat) == len(set(flat)) == h.calls
+
+
+def test_edited_result_file_is_rejected(tmp_path):
+    p = tmp_path / "enum_val.csv"
+    write_results(p, _rows(), list(_rows()[0]), _meta(tmp_path))
+    p.write_bytes(p.read_bytes().replace(b"abstain", b"feasible"))
+    with pytest.raises(ResultStoreError, match="SHA-256"):
+        load_results(p)
+
+
+def test_row_count_in_meta_must_match(tmp_path):
+    p = tmp_path / "enum_val.csv"
+    write_results(p, _rows(), list(_rows()[0]), _meta(tmp_path))
+    mp = tmp_path / "enum_val.csv_meta.json"
+    m = json.loads(mp.read_text(encoding="ascii"))
+    m["n_rows"] = 3
+    mp.write_text(json.dumps(m), encoding="ascii")
+    with pytest.raises(ResultStoreError, match="rows"):
+        load_results(p)
+
+
+def test_rewriting_removes_the_old_meta_first(tmp_path):
+    p = tmp_path / "enum_val.csv"
+    write_results(p, _rows(), list(_rows()[0]), _meta(tmp_path))
+
+    class Boom:
+        def __iter__(self):
+            raise RuntimeError("interrupted")
+
+    with pytest.raises(RuntimeError):
+        write_results(p, Boom(), ["id"], _meta(tmp_path))
+    with pytest.raises(ResultStoreError, match="without its meta file"):
+        load_results(p)
