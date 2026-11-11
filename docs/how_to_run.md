@@ -15,9 +15,10 @@ pip install -e ".[test]"
 
 | Command | What it does | Good result |
 |---|---|---|
-| `python -m pytest -q` | Runs all automatic tests of the checker, the parser and the splits. About 15 seconds. | `155 passed` (with the workbooks present) |
+| `python -m pytest -q` | Runs all automatic tests of the checker, the parser, the splits and the Stage 1 baselines. About a minute (machine-dependent). | `167 passed` (with the workbooks present) |
 | `python scripts/reference_case.py` | Designs one beam for the reference floor (9 m span) and prints the checks. | first line ends `lightest feasible = 457x191x74` |
 | `python scripts/context_audit.py --check` | Rebuilds every split file and audit table in a temporary folder and compares them with the committed files. A few minutes. | `differing or missing: none` |
+| `python scripts/run_baselines1.py` | Runs the four Stage 1 baselines (enumeration, ordered scan, heuristic iteration, random search) over all 34,841 split contexts and stores every design in `results/baselines1/`. Single-threaded, about 50 minutes. `--limit N` is a quick smoke run. | last line `enumeration == ordered scan on every context: True` |
 
 If `pytest` reports many `skipped`, the workbooks are not in `data/raw/`.
 
@@ -38,7 +39,7 @@ Each line is one beam section. `bend 0.998` means the bending check uses 99.8 % 
 | `docs/context_audit.md` | Short readable summary of the audit. |
 | `docs/spec.md` | The fixed study plan (the pre-registration), with dated amendments A1 and A2. |
 | `docs/patch_plan.md` | The list of work steps (patches) and what comes next. |
-| `results/` | Output of runs. Git ignores it; each result file has a `*_meta.json` recording the code version. |
+| `results/` | Output of runs. Git ignores it; each result file has a `*_meta.json` recording the code version, the environment-file SHA-256 and the hardware. `results/baselines1/` holds the P7 baseline results. |
 
 ## 5. Things to know
 
