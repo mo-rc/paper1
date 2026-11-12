@@ -11,3 +11,4 @@ data/catalogue/*
 !data/catalogue/.gitkeep
 *.egg-info/
 CLAUDE.md
+patches/
