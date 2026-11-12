@@ -514,11 +514,21 @@ def render_gate3(path, summary, hashes, commit, dirty, limit):
 # ------------------------------------------------------------------ --check: rebuild in a temp folder and compare
 def compare(tmp):
     names = [f"paper/tables/{n}" for n in COMMITTED] + ["docs/gate3_record.md"]
-    bad = [name for name in names if Path(name).read_bytes() != Path(tmp, name).read_bytes()]
+    bad = []
+    for name in names:
+        repo, temp = Path(name).read_bytes(), Path(tmp, name).read_bytes()
+        if name == "docs/gate3_record.md":
+            # the provenance line embeds the git commit and tree state at run time; once the
+            # record is committed the rebuild names the new HEAD, so the line is exempted and
+            # everything else is compared byte for byte
+            repo = b"\n".join(l for l in repo.splitlines() if not l.startswith(b"Provenance:"))
+            temp = b"\n".join(l for l in temp.splitlines() if not l.startswith(b"Provenance:"))
+        if repo != temp:
+            bad.append(name)
     if bad:
         print("DIFFERING:", *bad, sep="\n  ")
         return 1
-    print(f"identical ({len(names)} files)")
+    print(f"identical ({len(names)} files; the record's provenance line is exempted)")
     return 0
 
 
