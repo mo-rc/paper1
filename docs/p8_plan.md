@@ -25,7 +25,7 @@ Uniform crossover + random-section mutation (A5). Everything else is decided and
 
 ## 3. The MLP variant (i)
 
-- **Labels**: the first 2,197 rows of `train.csv` in file order (decided). Label = the enumeration optimum section of the context, one-hot over the 91 sections. Costed both ways per §9 and both recorded in the meta: full enumeration, 2,197 × 91 = 199,927 calls; and the ordered-scan-with-certificate cost, sum of (optimum rank + 1) per label.
+- **Labels**: the first 2,197 rows of `train.csv` in file order that have a feasible enumeration optimum (rows whose context has no feasible section are skipped in file order — decided, recorded in the meta). Label = the enumeration optimum section of the context, one-hot over the 91 sections. Costed both ways per §9 and both recorded in the meta: full enumeration, 2,197 × 91 = 199,927 calls; and the ordered-scan-with-certificate cost, sum of (optimum rank + 1) per label.
 - **Features**: 12 inputs — span, tributary width, dead, live, restraint ratio, one-hot deflection rule (3), one-hot depth cap (4, including "none") — z-scored with train-set statistics (recorded).
 - **Model**: 91-way softmax MLP, cross-entropy, Adam, PyTorch 2.5.1+cpu (VERIFIED available in `rl_env`), `torch.set_num_threads(1)`, fixed data order, no shuffle. Training costs 0 checker calls — the labels are already costed.
 - **Configurations**: grid = hidden ∈ {1×64, 1×128, 2×64, 2×128}, lr ∈ {1e-3, 3e-4, 1e-4}, epochs ∈ {20, 40, 80}, batch ∈ {32, 64}; the 12 tuning configurations are `random.Random("mlp-configs-2026-11-15").sample(grid, 12)` in this fixed order (same §9 rule). Each configuration trains once on the 2,197 labels and is scored on V; the V evaluation calls (1 verification per context plus repair steps) are counted and added to the classifier's cost (spec §9: tuning calls are added to the training cost; for the classifier the "training cost" is the label cost, decided and recorded). **The same selection rule as the GA applies: the first drawn configuration is the default and is replaced only on a ≥ 0.5 percentage-point V mean-gap improvement with feasibility not lower, in draw order; recorded in the meta.**
@@ -83,6 +83,7 @@ Acceptance line (READ: `docs/patch_plan.md` P8): *every baseline reports feasibi
 7. The permutation order for the exact seed-level tests is `itertools.permutations` in lexicographic index order, fixed and recorded.
 8. The tuning score pools both budgets (a configuration is selected once and used at both); gap is the mean over rows with a feasible output, feasibility is the share of (budget, seed, context) rows with a feasible output; a configuration with no feasible output has gap = infinity and never replaces the default unless the default also has none.
 9. The committed snapshot is written by the run unless `--out` is given (tests use `--out`, so they never touch the committed file).
+10. Train rows whose context has no feasible section cannot carry a 91-way label; they are skipped in file order and the count is recorded in the labels meta.
 
 ## 9. What P8 does not do
 
