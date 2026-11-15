@@ -1,45 +1,45 @@
-# P8 Stage 1 baselines II: run-output snapshot (2026-11-15, --limit 100 sample)
+# P8 Stage 1 baselines II: run-output snapshot (2026-11-15, full run)
 # Run made from commit 115cf7e43b1ba135b0ec56369afbe9c121372f86 (dirty working tree).
 # Printed output of: python scripts/baselines2_summary.py results/baselines2
 # The SHA-256 lines below are the sha256sum of the result files (the same hashes are recorded in each *_meta.json).
 # results/ stays git-ignored; archive the folder (e.g. Zenodo) at submission.
 # The GA is the mass-order variant (Amendment A6: blend crossover, index-step mutation, nearest-unseen redraw, grid p * k <= 10); the categorical-native variant is kept but not run in full (its equivalence to random search is recorded in run_summary.json).
 # The GA fitness uses utilisation overrun for infeasible sections; the budget-91 result is a cost data point, not a GA-quality result (recorded in run_summary.json).
-test_t1       ga    budget  20  exact    211  false-abstain    202  mean gap  16.744%  (rows 1000)
-test_t1       ga    budget  91  exact    810  false-abstain      0  mean gap   0.000%  (rows 1000)
-test_t1       mlp   budget   -  exact    473  false-abstain      1  mean gap  17.641%  (rows 1000)
-test_t2       ga    budget  20  exact    230  false-abstain    204  mean gap  15.566%  (rows 1000)
-test_t2       ga    budget  91  exact    800  false-abstain      0  mean gap   0.000%  (rows 1000)
-test_t2       mlp   budget   -  exact    482  false-abstain      0  mean gap  15.197%  (rows 1000)
-test_t3       ga    budget  20  exact    101  false-abstain     84  mean gap  14.599%  (rows 1000)
-test_t3       ga    budget  91  exact    320  false-abstain      0  mean gap   0.000%  (rows 1000)
-test_t3       mlp   budget   -  exact    290  false-abstain      2  mean gap   1.647%  (rows 1000)
-test_t4       ga    budget  20  exact    255  false-abstain    175  mean gap  17.968%  (rows 1000)
-test_t4       ga    budget  91  exact    920  false-abstain      0  mean gap   0.000%  (rows 1000)
-test_t4       mlp   budget   -  exact    488  false-abstain      1  mean gap  22.388%  (rows 1000)
-test_t5       ga    budget  20  exact    240  false-abstain     47  mean gap  23.144%  (rows 1000)
-test_t5       ga    budget  91  exact   1000  false-abstain      0  mean gap   0.000%  (rows 1000)
-test_t5       mlp   budget   -  exact    147  false-abstain      0  mean gap  63.129%  (rows 1000)
+test_t1       ga    budget  20  exact   4241  false-abstain   3432  mean gap  18.239%  (rows 20000)
+test_t1       ga    budget  91  exact  16350  false-abstain      0  mean gap   0.000%  (rows 20000)
+test_t1       mlp   budget   -  exact  12963  false-abstain     10  mean gap   1.995%  (rows 20000)
+test_t2       ga    budget  20  exact   1086  false-abstain    912  mean gap  16.110%  (rows 5000)
+test_t2       ga    budget  91  exact   3880  false-abstain      0  mean gap   0.000%  (rows 5000)
+test_t2       mlp   budget   -  exact   2876  false-abstain      0  mean gap   4.453%  (rows 5000)
+test_t3       ga    budget  20  exact   1829  false-abstain   1658  mean gap  13.481%  (rows 15000)
+test_t3       ga    budget  91  exact   6090  false-abstain      0  mean gap   0.000%  (rows 15000)
+test_t3       mlp   budget   -  exact   5272  false-abstain     12  mean gap   1.363%  (rows 15000)
+test_t4       ga    budget  20  exact   3858  false-abstain   2629  mean gap  16.987%  (rows 15000)
+test_t4       ga    budget  91  exact  14040  false-abstain      0  mean gap   0.000%  (rows 15000)
+test_t4       mlp   budget   -  exact   9790  false-abstain     40  mean gap   3.140%  (rows 15000)
+test_t5       ga    budget  20  exact   8399  false-abstain   6253  mean gap  17.452%  (rows 38370)
+test_t5       ga    budget  91  exact  31020  false-abstain      0  mean gap   0.000%  (rows 38370)
+test_t5       mlp   budget   -  exact  22373  false-abstain     17  mean gap   2.754%  (rows 38370)
 reference     ga    budget  20  exact      7  false-abstain      1  mean gap  35.297%  (rows 40)
 reference     ga    budget  91  exact     40  false-abstain      0  mean gap   0.000%  (rows 40)
 
-e041c8b0b957e13dbca49c008c845b1453068d421e4d3614e3181ff5db51bcd4  ga_reference.csv
-29e9b69ad5a6423a7854adecae2d2df8abca4072fcbd3a1bd70037384e4401e5  ga_test_t1.csv
-fa37b9cd1b77d16260da86c1268acdc9b26a716789c36317b8c753a7e747ef56  ga_test_t2.csv
-366c07df636782f5412e9c3bdb014f0dec673eb1af09cb7bfc145fb5757c115c  ga_test_t3.csv
-859ac4c53b86ffc19be26448ae186c02744a2c6cad6718b5aeb9f1e2cad07e27  ga_test_t4.csv
-af13d72b951477732cbdd8f7a89b5ed448c9386344b23d3da2a93b60fdba4cdc  ga_test_t5.csv
-049325384294183bc502c51b63aba467048e9b36eefd47822f2e6b88ebc68f7b  ga_tune.csv
-1d174878d18631b3c6dcd6c3610c14c43a55aa3e9de728d9944dc201d7a43d64  mlp_test_t1.csv
-ebe487dcf33d69829ff9d9af4bbd85436a063e7e81490125debcca86cca30147  mlp_test_t2.csv
-22571ed17ab0167070dd6995e2e02a5d496aa90ef888ab3dafd27f3ec90a4632  mlp_test_t3.csv
-f72fe662a64b252d830e04097d403efec81fde9b5ff190c2d97ddc4c0f9dcd22  mlp_test_t4.csv
-17d1351ca06bd399aa879c0fb17340099c7cf18125e9cb17385d3dcec64e0e87  mlp_test_t5.csv
-5466650c02552f855ce2791a939d63c4c9f707d448f84a16cdccbd7f9b6e5ea4  mlp_tune.csv
+faeb0b8daefaeb5ac764382ddbf11eebbf5d2d8126525986876376b083bf2213  ga_reference.csv
+e127772a9edb3226f24dda2aa6e6e4b3adcec411e0a47db3a8e40b2a9f5525e3  ga_test_t1.csv
+945022573962e6c410beb92a1b8347ca6c547b95aea86de37da31b5ea881d8bc  ga_test_t2.csv
+19a9d3dc760a8c6fbb9760f96e2b9a9ad1328963f77e12657b816627f07f9766  ga_test_t3.csv
+f84649d207b18114a8911d1d8b9b59c67c0bd4d145f8f30de6a7cfba18ba37cc  ga_test_t4.csv
+75455fb9cd09701b1ed028861e21dee45dfe415c8bf329f73e9608c3828c2cc2  ga_test_t5.csv
+591373c3f2cecdbcec166f33f9d2b71285891f67cd785621813a3676223c5fcd  ga_tune.csv
+573b0d568eba28e62ea4b69392601b344baaa600ceab9793fad21a6d3b8cf2dc  mlp_test_t1.csv
+3457e5af73461ad695ba3d824ac83b04f2a78a99550a3b43085ae4b8f5f53d05  mlp_test_t2.csv
+174a30a54cc6ddf6100178c4e39ebd679fc5901c1521628779c470ee39b8f24e  mlp_test_t3.csv
+54e503e5a2f5a3cfdbf70f40c297cf15f425108932bece260d7ec60aae4e177f  mlp_test_t4.csv
+b8b09cb72df91cc6264b49ffef9e8bc71e827080c605d07820b36c598b712a3c  mlp_test_t5.csv
+6ac2edb938c100a69cb3454305adb541a8c4505c489f48819016a966edf89a29  mlp_tune.csv
 8f49bc58f7cfc6876af615188f31cc6d7f11dca313b45a905af146a875dbe734  ref_reference.csv
-ae6733e398e6278193fe4cb566855afad8033adaacc07bc3c2840353501dc51c  ref_test_t1.csv
-52edd0031db65150dfd9462b000fcd2aa5b7f8ca8c57780f591d9430916d2b2a  ref_test_t2.csv
-eb1f267abda579cd2b4525993c57ebec364268aa90669c0d6bc935ca7de96a42  ref_test_t3.csv
-7dd35079a3645e57139eb516bb09cdc9dc66cc6d4d88233a6cbae8e60269131c  ref_test_t4.csv
-baf03a9c487221843ba7d1437283df691dc3218d55f690cfaaafdb30613e6cc5  ref_test_t5.csv
-3207492ad21ae6eab47b3961f85c11a2e0b2bd627812d28817cc785122d4bdc3  ref_val.csv
+7ceafb8ec01ffae6adab3bca8853ceeb0d24f4b23df5d1726e4acdcf46febec4  ref_test_t1.csv
+de09d690fdacbeecedd669be726576c0ab45f6b20a5302daad7f70c1a786d5cf  ref_test_t2.csv
+f2b6c78518e41e3ebfd800924b1e3dc45f61e93f104fd924c804d03607403975  ref_test_t3.csv
+04cb10043641f5e9e2442ed308b58e304c8e60246289408d0bf6f1dbc905ee96  ref_test_t4.csv
+0530f36f0132e764198207cee58f244f1fe203d1930aced08330b39948eaff7c  ref_test_t5.csv
+e1275f87a490b81ef330660ea9762fa3956eebb82dae0215d2445c695f48d8b1  ref_val.csv
