@@ -1,5 +1,5 @@
-"""P8: run the trimmed Stage 1 baselines II - the categorical-native GA and the supervised MLP variant (i)
-(spec section 9 as trimmed by Amendment A5; plan docs/p8_plan.md). No RL.
+"""P8: run the trimmed Stage 1 baselines II - the mass-order GA (Amendment A6) and the supervised MLP
+variant (i) (spec section 9 as trimmed by Amendments A5 and A6; plan docs/p8_plan.md). No RL.
 
 Usage, from the repository root:
     python scripts/run_baselines2.py [workbook.xlsx]           full run: GA tuning on V (12 configurations,
@@ -151,6 +151,15 @@ def score_of(rows, config_id):
     return (float("inf") if not feas else float(np.mean(feas)), len(feas) / max(len(mine), 1))
 
 
+def false_abstain_of(rows, config_id, ref_feasible):
+    """(count, share in percent) of false abstains of one configuration over its rows: the count is over
+    rows whose reference is feasible (the P7 count definition); the share divides the count by all rows of
+    the configuration - the reading that reproduces P7's V budget-20 1,618 / 10,000 = 16.18 %."""
+    mine = [r for r in rows if str(r["config"]) == str(config_id)]
+    fa = sum(1 for r in mine if r["id"] in ref_feasible and r["status"] != "feasible")
+    return fa, (100.0 * fa / len(mine) if mine else 0.0)
+
+
 def main():
     argv, args = sys.argv[1:], []
     for i, a in enumerate(argv):
@@ -207,20 +216,24 @@ def main():
                          threads, limit, n_feas, len(rows) - n_feas, time.perf_counter() - t0, kc)
         write_results(outdir / f"ref_{fname}.csv", out, REF_COLUMNS, meta)
 
-    # ------------------------------------------------ GA tuning on V (Amendment A5)
-    ga_configs = baselines2.draw_ga_configs()
+    # ------------------------------------------------ GA tuning on V (Amendment A5; the GA is the
+    # mass-order variant per Amendment A6, grid constrained to p * k <= 10)
+    ga_configs = baselines2.draw_mass_ga_configs()
     ga_tune_rows = []
     for cfg in ga_configs:
         for budget in baselines2.GA_BUDGETS:
             for seed in baselines2.GA_TUNE_SEEDS:
                 for r, ctx, ref in refs[TUNE_FILE]:
                     fn = (lambda k, c, b=budget, sd=seed, cid=r["id"], cf=cfg:
-                          baselines2.ga(k, c, b, sd, cid, cf))
+                          baselines2.mass_ga(k, c, b, sd, cid, cf))
                     res, wall, vc, ver = run_method(kc, ctx, fn)
                     ga_tune_rows.append(row_of(kc, r, "ga", str(seed), str(budget), str(cfg.id), res, vc, wall,
                                                ref.index, ver))
     ga_scores = [score_of(ga_tune_rows, cfg.id) for cfg in ga_configs]
     ga_selected = baselines2.select_config(ga_scores)
+    ref_feasible_V = {r["id"] for r, _, ref in refs[TUNE_FILE] if ref.index >= 0}
+    ga_false_abstains = [false_abstain_of(ga_tune_rows, cfg.id, ref_feasible_V)[0] for cfg in ga_configs]
+    ga_false_abstain_shares = [false_abstain_of(ga_tune_rows, cfg.id, ref_feasible_V)[1] for cfg in ga_configs]
     ga_tune_calls = sum(int(r["calls"]) for r in ga_tune_rows)
     n_val = len(refs[TUNE_FILE])
     meta = base_meta("ga_tune", TUNE_FILE, n_val, commit, dirty, hashes, started, catalogue_sha, hardware,
@@ -228,14 +241,24 @@ def main():
                      sum(1 for r in ga_tune_rows if r["status"] != "feasible"), time.perf_counter() - t0, kc)
     meta.update({"seeds": list(baselines2.GA_TUNE_SEEDS), "budgets": list(baselines2.GA_BUDGETS),
                  "configs": [asdict(c) for c in ga_configs], "tuning_rule": baselines2.TUNING_RULE,
+                 "ga_variant": "mass-order (Amendment A6)",
+                 "config_grid_constraint": "p * k <= 10: the initial population spends at most half of the "
+                                           "budget-20 evaluations (Amendment A6)",
                  "tuning_calls_ga_evals": ga_tune_calls})
     write_results(outdir / "ga_tune.csv", ga_tune_rows, COLUMNS, meta)
     sel = {"rule": baselines2.TUNING_RULE,
            "gap_reading": "gap is the mean over rows with a feasible output; a configuration that outputs no "
                           "design on V has gap = infinity; feasibility is the share of (budget, seed, context) "
                           "rows with a feasible output (both budgets pooled, draw order)",
+           "false_abstain_reading": ("counted over V rows whose reference is feasible; the share divides the "
+                                     "count by all (budget, seed, context) rows of the configuration (both "
+                                     "budgets pooled) - the reading that reproduces P7's V budget-20 "
+                                     "1,618 / 10,000 = 16.18 %"),
            "scores": [{"config": asdict(cfg), "mean_gap_pct": (None if g == float("inf") else round(g, 6)),
-                       "feasibility": round(f, 6)} for cfg, (g, f) in zip(ga_configs, ga_scores)],
+                       "feasibility": round(f, 6),
+                       "false_abstain": fa, "false_abstain_share_pct": round(fas, 6)}
+                      for cfg, (g, f), fa, fas in zip(ga_configs, ga_scores, ga_false_abstains,
+                                                      ga_false_abstain_shares)],
            "selected_config": asdict(ga_configs[ga_selected]), "tuning_calls_ga_evals": ga_tune_calls,
            "n_contexts_V": n_val}
     sel_file = outdir / "ga_tuning_selection.json"
@@ -255,7 +278,7 @@ def main():
             for budget in baselines2.GA_BUDGETS:
                 for seed in baselines2.GA_SEEDS:
                     fn = (lambda k, c, b=budget, sd=seed, cid=r["id"], cf=ga_cfg:
-                          baselines2.ga(k, c, b, sd, cid, cf))
+                          baselines2.mass_ga(k, c, b, sd, cid, cf))
                     res, wall, vc, ver = run_method(kc, ctx, fn)
                     if budget == n and (res.status, res.index) != (ref.status, ref.index):
                         raise SystemExit(f"GA budget |C| != enumeration on context {r['id']}: {res} vs {ref}")
@@ -267,6 +290,11 @@ def main():
                          limit, n_feas_ref, n_ctx - n_feas_ref, time.perf_counter() - t0, kc)
         meta.update({"seeds": list(baselines2.GA_SEEDS), "budgets": list(baselines2.GA_BUDGETS),
                      "config": asdict(ga_cfg), "tuning_rule": baselines2.TUNING_RULE,
+                     "ga_variant": "mass-order (Amendment A6)",
+                     "ga_operators_note": ("BLX-0.5 blend crossover; index-step mutation s = 4; the duplicate "
+                                           "rule redraws an already-evaluated (or already-drawn) allele as the "
+                                           "nearest unseen index (ties: smaller index); the configuration grid "
+                                           "is constrained to p * k <= 10"),
                      "ga_fitness_note": ("feasible sections by mass (lightest best); infeasible sections below "
                                          "every feasible one by utilisation overrun max(0, U_max - 1), least "
                                          "first, then mass"),
@@ -294,16 +322,19 @@ def main():
         else:
             skipped += 1  # no feasible section on this context: skipped in file order (decided, recorded)
     n_labels = len(labels)
-    label_cost_full = n_labels * n
-    label_cost_scan = sum(opt + 1 for _, opt in labels)
+    label_cost_full = (n_labels + skipped) * n   # every skipped train row cost a full enumeration (91 calls)
+    label_cost_scan = sum(opt + 1 for _, opt in labels) + n * skipped  # an abstaining context scans all 91
     labels_json = {"n_labels": n_labels, "context_ids": label_ids, "labels": [opt for _, opt in labels],
                    "n_skipped_no_feasible_ref": skipped,
                    "label_note": "the first rows of train.csv in file order that have a feasible enumeration "
                                  "optimum (rows whose context has no feasible section are skipped)",
                    "cost_full_enumeration_calls": label_cost_full,
                    "cost_ordered_scan_calls": label_cost_scan,
-                   "cost_note": "full enumeration = n_labels * |C|; ordered scan with certificate = sum of "
-                                "(optimum rank + 1) per label (spec section 9)"}
+                   "cost_note": ("full enumeration = (n_labels + n_skipped) * |C| - every skipped train row "
+                                 "cost the full enumeration (91 calls) that found no feasible section; ordered "
+                                 "scan with certificate = sum of (optimum rank + 1) per label + |C| per skipped "
+                                 "row - on an abstaining context the ordered scan scans all 91 sections "
+                                 "(verified in `ordered_scan` of src/ub_rl/baselines.py); spec section 9")}
     lab_file = outdir / "mlp_labels.json"
     lab_file.write_text(json.dumps(labels_json, indent=2) + "\n", encoding="ascii", newline="\n")
     write_meta(lab_file, {**base_meta("mlp_labels", "train", n_labels, commit, dirty, hashes, started,
@@ -325,6 +356,9 @@ def main():
             mlp_tune_rows.append(row_of(kc, r, "mlp", "0", "", str(cfg.id), res, vc, wall, ref.index, ver))
     mlp_scores = [score_of(mlp_tune_rows, cfg.id) for cfg in mlp_configs]
     mlp_selected = baselines2.select_config(mlp_scores)
+    mlp_false_abstains = [false_abstain_of(mlp_tune_rows, cfg.id, ref_feasible_V)[0] for cfg in mlp_configs]
+    mlp_false_abstain_shares = [false_abstain_of(mlp_tune_rows, cfg.id, ref_feasible_V)[1]
+                                for cfg in mlp_configs]
     mlp_tune_calls = sum(int(r["verification_calls"]) + int(r["calls"]) for r in mlp_tune_rows)
     meta = base_meta("mlp_tune", TUNE_FILE, n_val, commit, dirty, hashes, started, catalogue_sha, hardware,
                      threads, limit, sum(1 for r in mlp_tune_rows if r["status"] == "feasible"),
@@ -339,8 +373,14 @@ def main():
            "gap_reading": "gap is the mean over rows with a feasible output; a configuration that outputs no "
                           "design on V has gap = infinity; feasibility is the share of V contexts with a "
                           "feasible output (draw order)",
+           "false_abstain_reading": ("counted over V contexts whose reference is feasible; the share divides "
+                                     "the count by all rows of the configuration (draw order) - the same "
+                                     "reading as the GA tuning file"),
            "scores": [{"config": asdict(cfg), "mean_gap_pct": (None if g == float("inf") else round(g, 6)),
-                       "feasibility": round(f, 6)} for cfg, (g, f) in zip(mlp_configs, mlp_scores)],
+                       "feasibility": round(f, 6),
+                       "false_abstain": fa, "false_abstain_share_pct": round(fas, 6)}
+                      for cfg, (g, f), fa, fas in zip(mlp_configs, mlp_scores, mlp_false_abstains,
+                                                      mlp_false_abstain_shares)],
            "selected_config": asdict(mlp_configs[mlp_selected]), "train_seed": 0, "n_labels": n_labels,
            "tuning_calls_verification_and_repair": mlp_tune_calls, "n_contexts_V": n_val}
     sel_file = outdir / "mlp_tuning_selection.json"
@@ -400,23 +440,41 @@ def main():
             "tuning_gap_reading": ("gap is the mean over V rows with a feasible output; feasibility is the "
                                    "share of (budget, seed, context) rows with a feasible output; both budgets "
                                    "pooled; a configuration that outputs no design has gap = infinity"),
+            "tuning_false_abstain_reading": ("counted over V rows whose reference is feasible; the share "
+                                             "divides the count by all (budget, seed, context) rows of the "
+                                             "configuration (both budgets pooled) - the reading that "
+                                             "reproduces P7's V budget-20 1,618 / 10,000 = 16.18 %"),
             "selected_config": asdict(ga_cfg), "tuning_scores": [{"id": c.id, **dict(zip(("mean_gap_pct",
-                                   "feasibility"), (None if g == float("inf") else round(g, 6), round(f, 6))))}
-                                 for c, (g, f) in zip(ga_configs, ga_scores)],
+                                   "feasibility", "false_abstain"),
+                                   (None if g == float("inf") else round(g, 6), round(f, 6), fa)))}
+                                 for c, (g, f), fa in zip(ga_configs, ga_scores, ga_false_abstains)],
             "tuning_calls_ga_evals": ga_tune_calls,
+            "ga_variant": "mass-order (Amendment A6)",
+            "config_grid_constraint": ("p * k <= 10: the initial population spends at most half of the "
+                                       "budget-20 evaluations (Amendment A6)"),
             "fitness_note": ("feasible sections by mass (lightest best); infeasible sections below every "
                              "feasible one by utilisation overrun max(0, U_max - 1), least first, then mass"),
             "budget_C_note": ("budget |C| evaluates every section (the duplicate rule redraws from unseen "
                               "sections), so it equals the enumeration optimum on every context and seed; the "
                               "budget-91 result is a cost data point, not a GA-quality result"),
+            "categorical_ga_note": ("the categorical-native GA in src/ub_rl/baselines2.py (kept, tested, not "
+                                    "run in full) is structurally random search without replacement: every "
+                                    "evaluation is a uniform draw from the unseen sections, so the evaluated "
+                                    "set is a uniform sample without replacement of the budget size and the "
+                                    "output is the lightest feasible among them - exactly P7's random_search. "
+                                    "The equivalence was found by the structural argument and then confirmed "
+                                    "on a 100-context T1 sample (run commit 54db07a: exact 184 of 1,000 rows = "
+                                    "18.4 %, mean gap 15.023 %; P7 random search T1 budget 20, run commit "
+                                    "b5aadf4: exact 3,607 of 20,000 = 18.0 %, mean gap 14.696 %); no test-set "
+                                    "result informed the choice of the replacement GA (Amendment A6)"),
             "files": ga_per_file,
         },
         "mlp": {
             "tuning_rule": baselines2.TUNING_RULE,
             "selected_config": asdict(mlp_cfg), "train_seeds": list(baselines2.GA_SEEDS),
-            "tuning_scores": [{"id": c.id, **dict(zip(("mean_gap_pct", "feasibility"),
-                               (None if g == float("inf") else round(g, 6), round(f, 6))))}
-                              for c, (g, f) in zip(mlp_configs, mlp_scores)],
+            "tuning_scores": [{"id": c.id, **dict(zip(("mean_gap_pct", "feasibility", "false_abstain"),
+                               (None if g == float("inf") else round(g, 6), round(f, 6), fa)))}
+                              for c, (g, f), fa in zip(mlp_configs, mlp_scores, mlp_false_abstains)],
             "labels": labels_json,
             "tuning_calls_verification_and_repair": mlp_tune_calls,
             "cost_note": ("training costs 0 checker calls (the labels are costed); tuning adds the V "
@@ -446,6 +504,9 @@ def main():
             "# The SHA-256 lines below are the sha256sum of the result files (the same hashes are recorded in"
             " each *_meta.json).",
             "# results/ stays git-ignored; archive the folder (e.g. Zenodo) at submission.",
+            "# The GA is the mass-order variant (Amendment A6: blend crossover, index-step mutation, nearest-"
+            "unseen redraw, grid p * k <= 10); the categorical-native variant is kept but not run in full"
+            " (its equivalence to random search is recorded in run_summary.json).",
             "# The GA fitness uses utilisation overrun for infeasible sections; the budget-91 result is a cost"
             " data point, not a GA-quality result (recorded in run_summary.json).",
         ]

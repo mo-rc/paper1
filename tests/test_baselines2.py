@@ -1,8 +1,10 @@
-"""P8: Stage 1 baselines II - the categorical-native GA (uniform crossover, random-section mutation; budgets 20
-and |C|; seeds 0-9; tuning 12 configurations on V with the Amendment A5 default rule) and the supervised MLP
-variant (i) (2,197 enumeration labels, 91-way softmax, end-to-end verify + repair). Plan docs/p8_plan.md;
+"""P8: Stage 1 baselines II - the mass-order GA (Amendment A6: blend crossover, index-step mutation, nearest-
+unseen redraw; budgets 20 and |C|; seeds 0-9; tuning 12 configurations on V with the Amendment A5 default
+rule), the categorical-native GA (kept and tested, superseded by A6 - not run in full), and the supervised
+MLP variant (i) (2,197 enumeration labels, 91-way softmax, end-to-end verify + repair). Plan docs/p8_plan.md;
 acceptance line: every baseline reports feasibility, gap and calls on T1 to T5. Skips without the workbook;
-samples the split files so the suite stays fast (the full run is scripts/run_baselines2.py)."""
+samples the split files so most of the suite stays fast (the full run is scripts/run_baselines2.py). Test 14
+is deliberately heavy: it runs the full V tuning and the full V budget-20 comparison (about 10-15 minutes)."""
 import json
 import os
 import subprocess
@@ -25,6 +27,11 @@ N_SAMPLE = 10  # first N contexts per file
 SNAPSHOT = ROOT / "paper" / "tables" / "baselines2_run_output.txt"
 CFG0 = baselines2.GAConfig(0, 4, 1, 2, 0.1, 0.5, 0)          # k=1, no elitism
 CFG_K2 = baselines2.GAConfig(9, 4, 2, 2, 0.1, 1.0, 1)        # k=2, elitism: exercises both paths
+MCFG0 = baselines2.draw_mass_ga_configs()[0]                 # the A6 default configuration
+MCFG1 = baselines2.draw_mass_ga_configs()[1]                 # a k=2 configuration
+MUT_ONLY = baselines2.GAConfig(0, 2, 1, 1, 0.5, 0.0, 0)      # test 13: no selection, no crossover
+P7_V_MEAN_GAP_PCT = 14.823   # P7 random search, V, budget 20 (paper/tables/baselines1_run_output.txt)
+P7_V_FALSE_ABSTAIN_SHARE_PCT = 16.18  # P7: 1,618 / 10,000 rows (same snapshot)
 
 
 @pytest.fixture(scope="module")
@@ -142,6 +149,158 @@ def test_select_config_tuning_rule():
     assert baselines2.select_config([(0.3, 0.7)]) == 0              # the default is always the first drawn
 
 
+# ---------------------------------------------------------------- the mass-order GA (Amendment A6)
+def test_mass_ga_config_draw_is_stable_distinct_and_in_grid():
+    a = baselines2.draw_mass_ga_configs()
+    b = baselines2.draw_mass_ga_configs()
+    assert [asdict_x(c) for c in a] == [asdict_x(c) for c in b]  # fixed seed, fixed grid -> stable
+    assert len({c.id for c in a}) == 12 and len({(c.p, c.k, c.t, c.m, c.c, c.e) for c in a}) == 12
+    grid = baselines2.mass_ga_config_grid()
+    assert len(grid) == 384  # 8 of the 20 p-k combinations x 3 t x 4 m x 2 c x 2 e
+    assert all((c.p, c.k, c.t, c.m, c.c, c.e) in grid for c in a)
+    assert all(c.p * c.k <= baselines2.GRID_INIT_LIMIT for c in a)  # A6: initial population <= half of budget 20
+
+
+def test_mass_ga_deterministic_per_seed(kc):
+    ctx = S.load_split("val", root=SPLITS)[1][0]
+    for cfg in (MCFG0, MCFG1):
+        a = baselines2.mass_ga(kc, ctx, 20, 5, "ctx", cfg)
+        b = baselines2.mass_ga(kc, ctx, 20, 5, "ctx", cfg)
+        assert (a.status, a.index, a.calls) == (b.status, b.index, b.calls)
+
+
+def test_mass_ga_budget_exact_distinct_and_counted(C, sample_contexts):
+    """Exactly `budget` distinct evaluations per run; the duplicate rule (a section already evaluated - or
+    already drawn in the batch - costs 0 and the slot is redrawn as the nearest unseen index) is enforced by
+    recording the evaluated sections: none repeats and no evaluation is wasted."""
+    seen = []
+
+    class Rec(baselines.CountingChecker):
+        def evaluate_context(self, ctx, idx=None):
+            seen.append([int(i) for i in np.atleast_1d(idx)])
+            return super().evaluate_context(ctx, idx)
+
+    rec = Rec(Checker(C))
+    for k, ctx in enumerate(sample_contexts):
+        for budget in baselines2.GA_BUDGETS:
+            for cfg in (MCFG0, MCFG1):
+                seen.clear()
+                before = rec.sections
+                res = baselines2.mass_ga(rec, ctx, budget, 1, f"c{k}", cfg)
+                flat = [i for part in seen for i in part]
+                assert len(flat) == len(set(flat)) == budget  # distinct, exactly the budget
+                assert res.calls == budget == rec.sections - before  # the counter is the source of truth
+
+
+def test_mass_ga_outputs_feasible_rechecked_and_not_lighter_than_optimum(kc, sample_contexts):
+    for k, ctx in enumerate(sample_contexts):
+        ref = baselines.enumerate(kc, ctx)
+        for budget in baselines2.GA_BUDGETS:
+            for seed in (0, 1, 2):
+                res = baselines2.mass_ga(kc, ctx, budget, seed, f"c{k}", MCFG0)
+                assert _recheck(kc, ctx, res)
+                if res.index >= 0:
+                    assert ref.index >= 0  # no feasible section can exist if enumeration abstains
+                    assert kc.mass[res.index] >= kc.mass[ref.index]  # never lighter than the optimum
+
+
+def test_mass_ga_budget_full_equals_enumeration(kc, sample_contexts):
+    """Budget |C| evaluates every section (nearest-unseen redraw), so it equals the enumeration optimum for
+    every seed and configuration - a cost data point, not a GA-quality result (recorded in the run summary)."""
+    for k, ctx in enumerate(sample_contexts):
+        ref = baselines.enumerate(kc, ctx)
+        for seed in (0, 1, 2):
+            for cfg in (MCFG0, MCFG1):
+                res = baselines2.mass_ga(kc, ctx, len(kc), seed, f"c{k}", cfg)
+                assert (res.status, res.index) == (ref.status, ref.index)
+
+
+def test_13_mutation_only_differs_from_random_search(C):
+    """Amendment A6 test 13: with selection and crossover removed (tournament of 1 = uniform parent, c = 0,
+    mutation probability 0.5), the mass-order GA's draw order is a local walk - its mean absolute step
+    between consecutive draws is far below a random order's (about n/3) on every one of 50 contexts. The
+    random order is P7's random_order prefix for the same seed, context and budget 20."""
+    rows, ctxs = S.load_split("val", root=SPLITS)
+    drawn = []
+
+    class Rec(baselines.CountingChecker):
+        def evaluate_context(self, ctx, idx=None):
+            drawn.append([int(i) for i in np.atleast_1d(idx)])
+            return super().evaluate_context(ctx, idx)
+
+    rec = Rec(Checker(C))
+
+    def mean_step(order):
+        return float(np.mean([abs(order[i + 1] - order[i]) for i in range(len(order) - 1)]))
+
+    for k, ctx in enumerate(ctxs[:50]):
+        drawn.clear()
+        res = baselines2.mass_ga(rec, ctx, 20, 0, rows[k]["id"], MUT_ONLY)
+        assert res.calls == 20
+        ga_order = [i for part in drawn for i in part]
+        assert len(ga_order) == len(set(ga_order)) == 20
+        rnd_order = baselines.random_order(len(rec), 0, rows[k]["id"])[:20]
+        assert mean_step(ga_order) < mean_step(rnd_order), (
+            f"context {rows[k]['id']}: GA step {mean_step(ga_order):.3f} vs random {mean_step(rnd_order):.3f}")
+
+
+@pytest.mark.xfail(strict=True, reason="A6 finding 2026-11-15 (recorded in docs/p8_plan.md section 6): on V at "
+                     "budget 20 all 12 mass-order configurations underperform P7 random search on mean gap and "
+                     "false-abstain share (measured 17.548 % vs 14.823 %); the design is revised before any "
+                     "run; strict: an accidental pass is reported as a change")
+def test_14_mass_ga_tuned_config_beats_random_search_on_V(kc, C):
+    """Amendment A6 test 14 (heavy, about 10-15 minutes): the configuration selected by the A5 tuning rule on
+    the full V (12 configurations x seeds 0-2 x budgets 20 and |C| on all 1,000 V contexts; the first drawn
+    configuration is the default, a replacement needs >= 0.5 percentage points of V mean-gap improvement with
+    feasibility not lower, in draw order) then runs at budget 20, seeds 0-9, on all 1,000 V contexts. Two
+    assertions against P7's random search at V budget 20 (paper/tables/baselines1_run_output.txt, commit
+    b5aadf4): mean gap - over rows where the reference is feasible and the GA outputs a design, the P7
+    summary denominator - < 14.823 %; and false-abstain share < 16.18 % (count over reference-feasible rows
+    where the GA abstains, divided by all 10,000 V rows - the reading that reproduces 1,618 / 10,000)."""
+    rows, ctxs = S.load_split("val", root=SPLITS)
+    refs = []
+    for ctx in ctxs:
+        ref = baselines.enumerate(kc, ctx)
+        refs.append((ref.index, float(kc.mass[ref.index]) if ref.index >= 0 else 0.0))
+
+    # --- the A5 tuning on the full V (the same rule and reading as scripts/run_baselines2.py)
+    cfgs = baselines2.draw_mass_ga_configs()
+    scores = []
+    for cfg in cfgs:
+        gaps, n_all, n_feas, fa = [], 0, 0, 0
+        for r, ctx, (ri, rm) in zip(rows, ctxs, refs):
+            for budget in baselines2.GA_BUDGETS:
+                for seed in baselines2.GA_TUNE_SEEDS:
+                    res = baselines2.mass_ga(kc, ctx, budget, seed, r["id"], cfg)
+                    n_all += 1
+                    if res.index >= 0:
+                        n_feas += 1
+                    if ri >= 0:
+                        if res.index < 0:
+                            fa += 1
+                        else:
+                            gaps.append(100.0 * (float(kc.mass[res.index]) / rm - 1.0))
+        scores.append((float(np.mean(gaps)) if gaps else float("inf"), n_feas / n_all))
+    cfg = cfgs[baselines2.select_config(scores)]
+
+    # --- the budget-20 comparison on all 1,000 V contexts, seeds 0-9
+    gaps, fa = [], 0
+    for r, ctx, (ri, rm) in zip(rows, ctxs, refs):
+        for seed in baselines2.GA_SEEDS:
+            res = baselines2.mass_ga(kc, ctx, 20, seed, r["id"], cfg)
+            if ri >= 0:
+                if res.index < 0:
+                    fa += 1
+                else:
+                    gaps.append(100.0 * (float(kc.mass[res.index]) / rm - 1.0))
+    n_rows = len(rows) * len(baselines2.GA_SEEDS)
+    mean_gap = float(np.mean(gaps)) if gaps else float("inf")
+    share = 100.0 * fa / n_rows
+    assert mean_gap < P7_V_MEAN_GAP_PCT, f"mean gap {mean_gap:.3f} % vs P7 {P7_V_MEAN_GAP_PCT} %"
+    assert share < P7_V_FALSE_ABSTAIN_SHARE_PCT, f"false-abstain share {share:.3f} % vs P7 " \
+                                                 f"{P7_V_FALSE_ABSTAIN_SHARE_PCT} %"
+
+
 # ---------------------------------------------------------------- the MLP
 def test_mlp_labels_costings_arithmetic():
     assert mlp_baseline.N_LABELS == 2197
@@ -202,18 +361,29 @@ def test_run_baselines2_smoke(tmp_path, raw_path):
     assert summary["ga"]["tuning_rule"] == baselines2.TUNING_RULE
     assert "utilisation overrun" in summary["ga"]["fitness_note"]
     assert "cost data point" in summary["ga"]["budget_C_note"]
-    assert summary["mlp"]["labels"]["n_labels"] <= 3 and summary["mlp"]["labels"]["n_skipped_no_feasible_ref"] >= 0
+    assert summary["ga"]["ga_variant"] == "mass-order (Amendment A6)"
+    assert "p * k <= 10" in summary["ga"]["config_grid_constraint"]
+    assert "structurally random search" in summary["ga"]["categorical_ga_note"]
+    assert "no test-set result informed" in summary["ga"]["categorical_ga_note"]
+    labels = summary["mlp"]["labels"]
+    assert labels["n_labels"] <= 3 and labels["n_skipped_no_feasible_ref"] >= 0
+    # the label accounting counts the 91 enumeration calls of every skipped train row (the fix)
+    assert labels["cost_full_enumeration_calls"] == (labels["n_labels"] + labels["n_skipped_no_feasible_ref"]) * 91
+    assert labels["cost_ordered_scan_calls"] == sum(opt + 1 for opt in labels["labels"]) \
+        + 91 * labels["n_skipped_no_feasible_ref"]
     assert summary["mlp"]["tuning_rule"] == baselines2.TUNING_RULE
 
     sel, sel_meta = (json.loads((out / "ga_tuning_selection.json").read_text(encoding="ascii")),
                      json.loads((out / "ga_tuning_selection.json_meta.json").read_text(encoding="ascii")))
     assert sel["rule"] == baselines2.TUNING_RULE and sel_meta["tuning_rule"] == baselines2.TUNING_RULE
     assert sel["selected_config"]["id"] in range(12)
+    assert len(sel["scores"]) == 12 and all("false_abstain" in s for s in sel["scores"])  # all 12 V scores recorded
     for fname in ["test_t1", "reference"]:
         ref_rows, _ = load_results(out / f"ref_{fname}.csv")
         ga_rows, ga_meta = load_results(out / f"ga_{fname}.csv")
         assert len(ga_rows) == len(ref_rows) * 10 * 2
         assert ga_meta["tuning_rule"] == baselines2.TUNING_RULE
+        assert ga_meta["ga_variant"] == "mass-order (Amendment A6)"
         for r in ga_rows:  # GA budget |C| equals enumeration on every stored row
             if r["budget"] == "91":
                 ref = next(x for x in ref_rows if x["id"] == r["id"])
