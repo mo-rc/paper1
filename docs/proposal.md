@@ -59,6 +59,8 @@ The catalogue study (Stage 1) is the controlled testbed with a known exact optim
 
 **Stage 1: catalogue selection.** Discrete choice among 91 sections. Formulations: direct choice, and step-by-step refinement of a trial section using the utilisation of each check. Algorithms are compared in a tournament under equal tuning effort: DQN, Double DQN, Dueling Double DQN, discrete PPO, discrete SAC, policy gradient, and a GFlowNet for diversity.
 
+> Note (dated, record of a change): the Stage 1 tournament in this section was superseded by Amendment A5 to `docs/spec.md` (2026-11-14, before any RL run): Stage 1 runs three algorithm-formulation entries — direct choice (REINFORCE with a learned baseline), refinement (Dueling Double DQN with prioritised replay and n-step returns) and constructive (conditional GFlowNet) — with the categorical-native genetic algorithm and the supervised classifier as the conventional comparisons. The original tournament list above stays visible.
+
 **Stage 2: custom welded sections.** Continuous or increment-based design of h, b, tw, tf. Algorithms: SAC, TD3, DDPG, PPO, branching dueling Q-networks, and hybrids where the policy warm-starts an optimizer.
 
 **Rewards.** Four families are compared on validation data: reference-relative, potential-based shaping, constrained (Lagrangian), and call-penalized. In all of them a safe design always scores higher than an unsafe one.

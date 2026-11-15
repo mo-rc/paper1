@@ -1,6 +1,6 @@
-# Scope trim (draft of Amendment A5): what Stage 1 keeps and what it cuts
+# Scope trim (Amendment A5): what Stage 1 keeps and what it cuts
 
-Status: draft, 2026-11-14, branch `review`. No code, no spec edits. This draft supersedes the earlier revisions of this file (2026-11-12) and the unapplied second-revision patch.
+Status: applied as Amendment A5 to `docs/spec.md` (2026-11-14, before any run). Approved by Dr Mudasir Hussain (supervisor), recorded by the project lead on his instruction, 2026-11-14. No code, no checker/physics/objective/split changes. This document is the source of the amendment; the applied text lives in `docs/spec.md`.
 
 **What this document is.** The research proposal is `docs/proposal.md` (unchanged — it says what the paper is about). The frozen pre-registration is `docs/spec.md`. The work plan is `docs/patch_plan.md`. This document is none of those: it is the trim plan — what we propose to cut from the pre-registered Stage 1 plan, why, what it costs, and the order of the remaining work. It becomes Amendment A5 to `docs/spec.md` only after it is applied. It does not change the checker, the physics, the objective, the splits or the success criteria.
 
@@ -49,7 +49,7 @@ By research question: RQ1 safety = S1 on the best configuration; RQ2 generalizat
 
 ## 4. Amendment A5 (draft text)
 
-**Amendment A5 (2026-11-12, finalised 2026-11-14, before any run): Stage 1 scope trim.** A4 stays reserved for Stage 2 (patch P14). Original text stays visible; the amendment governs the runs it names. A5 does not change Stage 2.
+**Amendment A5 (2026-11-14, before any run): Stage 1 scope trim.** Approved by Dr Mudasir Hussain (supervisor), recorded by the project lead on his instruction, 2026-11-14. A4 stays reserved for Stage 2 (patch P14). Original text stays visible; the amendment governs the runs it names. A5 does not change Stage 2.
 
 *Superseded (kept visible)*: A1 change 4, "Algorithms (Stage 1 tournament matrix): … About 110 runs in total (8 algorithm-formulation entries and 3 reward variants, 10 seeds each)."
 
@@ -68,6 +68,8 @@ By research question: RQ1 safety = S1 on the best configuration; RQ2 generalizat
 *Superseded (kept visible)*: §9, "Supervised MLP, three variants: (i) … (ii) … (iii) 20,000 enumeration labels …" *Replaced by*: variant (i) only (matched calls, 2,197 labels); (ii) and (iii) are not run unless reinstated by a further dated amendment.
 
 *Superseded (kept visible)*: §11 primary family, "P3 best RL configuration vs DE at budget 20, gap on T1." *Replaced by*: P3 best RL configuration vs the categorical-native GA at budget 20, gap on T1. The comparator is still stochastic, so the permutation test stands; Holm correction over the four comparisons is unchanged; P1, P2 and P4 are unchanged.
+
+***"Equal feasibility and gap" in N\* (new, fixed before any RL run)*: the spec's efficiency claim (§11) requires N* "at equal feasibility and gap" but defines no tolerance, and S2 (§11: median gap ≤ 2% on T1 and ≤ 3% on T2 for the median seed) is a quality success criterion, not a tolerance for N*. A5 fixes the reading: the learned policy is at equal feasibility and gap when its verified feasibility after repair is 1.0 and its mean gap is at most 0.5 percentage points — the tuning threshold of §9 — on the set where the comparison is made. Feasibility, gap and N* are reported together, and the efficiency claim is made only where the learned policy matches the heuristic on both.
 
 *Unchanged by A5*: checker, physics, objective, splits and their hashes, the ten-seed statistics, the definition of N* and N_ref = 10,000, S1/S2 (Stage 1), S3–S6 (Stage 2), the gate ordering. `docs/proposal.md` keeps its words; it gets one dated note in §6, in the same pattern as the A2 note in §5, saying Stage 1 runs the three A5 entries.
 
@@ -107,7 +109,7 @@ T and N* (VERIFIED arithmetic; "pass" means N* below 10,000):
 - The largest tuning budget that still passes at 50,000 calls is 4,077 calls per configuration ((131,930 − 50,000 − 33,000) / 12); A5 fixes 3,000, leaving 12,930 calls of margin.
 - **Repair calls raise c_learned.** A design that fails verification is repaired by moving up in mass order, one call per step, so c_learned = 1 + mean repair calls (READ: `docs/spec.md` §10). At the 50,000-call checkpoint with 3,000-call tuning, N* stays below 10,000 only while c_learned ≤ 2.29 (at 2.29 it is 10,000 exactly; at 3.0 it is 10,632 and the claim fails) (VERIFIED).
 - **3,000 calls (about 2,000 of learning) means noisier tuning.** The configuration ranking comes from very short single-seed runs, so it may favour fast-starting settings over the best final one (assumption; a property of short tuning, not measured here). The spec's rule (0.5 percentage points with feasibility not lower) means few settings will beat the default, and a weakly tuned agent biases against RL, not for it. The chosen configuration is frozen at Gate 4 before any test data is touched.
-- **N* counts only where feasibility and gap match the heuristic's at that checkpoint** (READ: `docs/spec.md` §10, "at equal feasibility and gap"). The heuristic has feasibility 1.0, gap 0.000% and no false abstentions on every set (READ: `docs/gate3_record.md`; 29,161 of 29,161 feasible contexts). The table is arithmetic about T, not a claim: at a checkpoint where the learned policy's verified feasibility is lower or its gap is above 0, there is no efficiency claim, whatever N* is. The spec states no tolerance for "equal"; A5 records the reading: feasibility, gap and N* are reported together, and the claim is made only where both match the heuristic's.
+- **N* counts only where feasibility and gap match the heuristic's at that checkpoint** (READ: `docs/spec.md` §11, "at equal feasibility and gap"). The heuristic has feasibility 1.0, gap 0.000% and no false abstentions on every set (READ: `docs/gate3_record.md`; 29,161 of 29,161 feasible contexts). The table is arithmetic about T, not a claim: at a checkpoint where the learned policy's verified feasibility is lower or its gap is above 0, there is no efficiency claim, whatever N* is. The spec states no tolerance for "equal" and S2's thresholds (2% on T1, 3% on T2) are quality success criteria, not a tolerance for N*. A5 fixes the reading, fixed before any RL run: the learned policy is at equal feasibility and gap when its verified feasibility after repair is 1.0 and its mean gap is at most 0.5 percentage points — the §9 tuning threshold — on the set where the comparison is made; feasibility, gap and N* are reported together, and the claim is made only where the learned policy matches the heuristic on both.
 - c_conv depends on the set (heuristic means: V 14.193; T3 19.23, READ: `docs/verification_record.md`). The set used for P1 is fixed at the freeze.
 - N* is computed against enumeration, ordered scan and heuristic iteration separately (READ: `docs/spec.md` §10); only the heuristic — the cheapest conventional method — is used above. The P3 comparator change does not touch N*.
 
@@ -132,12 +134,12 @@ Order note: `docs/patch_plan.md` lists P12 as one patch; this plan splits it (P1
 
 ## 7. Decisions recorded with A5
 
-The project lead records all decisions. Where the spec asks for a supervisor confirmation (as A2 did, recorded 2026-11-10 in `docs/spec.md`), the lead records it in the supervisor's name.
+The project lead records all decisions. Where the spec asks for a supervisor confirmation (as A2 did, recorded 2026-11-10 in `docs/spec.md`), the lead records it in the supervisor's name. A5 and the Gate 3 acceptance are recorded: Approved by Dr Mudasir Hussain (supervisor), recorded by the project lead on his instruction, 2026-11-14.
 
 1. Gate 3 acceptance.
 2. A5 as a whole: the P3 comparator change DE → GA; dropping DE, MLP (ii)/(iii), R2 and R-D; the GA budget and ordering trim; the GA tuning protocol (12 configurations, V, seeds 0-2); the RL tuning budget of 3,000 calls per configuration (all calls counted); the R-C trigger; the F1 N* rule.
 3. The T counting convention (one deployed policy: one training run, its own tuning and pilot). Under the alternative of counting all ten seeds, no checkpoint can meet the efficiency bar.
-4. No tolerance for "equal feasibility and gap" in the spec: feasibility, gap and N* are reported together, and efficiency is claimed only where both match the heuristic's.
+4. The meaning of "equal feasibility and gap" in N*: verified feasibility 1.0 after repair and mean gap at most 0.5 percentage points (the §9 tuning threshold), reported together with N* — fixed by A5 before any RL run.
 5. The Stage 2 trim principle of section 6, to be fixed in A4.
 6. The order change: pilots right after P10/P11 (P12a), Stage 2 audit before the Stage 1 freeze (P12b) and runs (P13), with a decision point after P16.
 7. The Gate 4 freeze as usual, with the amended primary family.

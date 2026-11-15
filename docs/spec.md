@@ -1,6 +1,6 @@
 # Specification (pre-registration)
 
-Version 1.2 with Amendments A1 and A2 (end of file). Repository: https://github.com/mo-rc/paper1. Frozen before any run. Changes are dated amendments at the end of this file, made before the affected run.
+Version 1.2 with Amendments A1, A2, A3 and A5 (end of file). Repository: https://github.com/mo-rc/paper1. Frozen before any run. Changes are dated amendments at the end of this file, made before the affected run.
 
 ## 1. Scope
 
@@ -125,17 +125,17 @@ Rewards use log-mass so a difference equals a relative mass gap. m_trial is the 
 - R3 Reward-proportional (F2): log R(x) = -beta*ln(m/m_trial) if feasible; log R(x) = -beta*ln(m_max/m_trial) - 10 if infeasible. Every feasible section has a strictly higher log-reward than every infeasible one by construction (feasible: at least -beta*ln(m_max/m_trial); infeasible: that minus 10). The total sampling weight of infeasible sections is at most |C|*e^-10 (about 0.4%) of the optimum's weight; verification handles the remainder. All reward arithmetic is in float64 log-space. beta in {25, 50, 100}, selected on V.
 - A check asserts the strict feasible > infeasible ordering for every context in V and every candidate.
 
-Configurations: F0-R1, F1-R1, F1-R2, F2-R3; seeds 0-9; 40 runs. Training budget: 200,000 checker calls per run; sample-efficiency curves at 10,000, 50,000 and 200,000 calls. Greedy output (arg max) is the policy output for S1 and S2; sampled output is reported separately. Pilot runs (3 seeds, 10,000 calls, validation set only) precede full runs.
+Configurations: F0-R1, F1-R1, F1-R2, F2-R3; seeds 0-9; 40 runs. *(Amendment A5, 2026-11-14, before any run: Stage 1 runs three of these configurations — F0-R1, F1-R1, F2-R3 — with seeds 0-9, 30 runs; F1-R2 is not run unless reinstated by a further dated amendment; the original text above stays visible.)* Training budget: 200,000 checker calls per run; sample-efficiency curves at 10,000, 50,000 and 200,000 calls. Greedy output (arg max) is the policy output for S1 and S2; sampled output is reported separately. Pilot runs (3 seeds, 10,000 calls, validation set only) precede full runs.
 
 Baselines:
 - Enumeration (exact reference; also timed).
 - Ordered scan: evaluate in mass order, stop at the first feasible section (exact).
 - Heuristic iteration (conventional manual design): trial section from the required modulus, move up until feasible, then down while feasible. Checker calls counted.
-- GA and DE over C at evaluation budgets 10, 20, 50, |C|; seeds 0-9. Section order sensitivity: mass order and three random permutations; plus a categorical-native variant (uniform crossover, random-section mutation).
+- GA and DE over C at evaluation budgets 10, 20, 50, |C|; seeds 0-9. Section order sensitivity: mass order and three random permutations; plus a categorical-native variant (uniform crossover, random-section mutation). *(Amendment A5, 2026-11-14, before any run: the GA runs as the categorical-native variant only, at budgets 20 and |C|, mass order, seeds 0-9; DE and the remaining orderings and budgets are not run unless reinstated by a further dated amendment. GA tuning: 12 configurations on V, budgets 20 and |C|, seeds 0-2, with the calls added to the GA's cost. The original text above stays visible.)*
 - Random search at the same budgets.
-- Supervised MLP, three variants: (i) enumeration labels at matched calls, floor(200,000/|C|) = 2,197 labels; (ii) heuristic-iteration labels at matched calls (label cost = calls used; optimality not certified, audited against enumeration on V); (iii) 20,000 enumeration labels, unmatched, as a favourable reference. Exact labels are costed two ways: |C| calls (full enumeration) and rank of the optimum (ordered scan with certificate). It tests whether RL is needed.
+- Supervised MLP, three variants: (i) enumeration labels at matched calls, floor(200,000/|C|) = 2,197 labels; (ii) heuristic-iteration labels at matched calls (label cost = calls used; optimality not certified, audited against enumeration on V); (iii) 20,000 enumeration labels, unmatched, as a favourable reference. Exact labels are costed two ways: |C| calls (full enumeration) and rank of the optimum (ordered scan with certificate). It tests whether RL is needed. *(Amendment A5, 2026-11-14, before any run: variant (i) only; (ii) and (iii) are not run unless reinstated by a further dated amendment. The original text above stays visible.)*
 
-Tuning: 12 configurations per algorithm (F0, F1, F2, GA, DE, classifier), drawn by a fixed seed, selected on V. A configuration change counts only if validation mean gap improves by at least 0.5 percentage points with feasibility not lower. Tuning checker calls are added to the training cost.
+Tuning: 12 configurations per algorithm (F0, F1, F2, GA, DE, classifier), drawn by a fixed seed, selected on V. A configuration change counts only if validation mean gap improves by at least 0.5 percentage points with feasibility not lower. Tuning checker calls are added to the training cost. *(Amendment A5, 2026-11-14, before any run: the RL entries (F0, F1, F2) tune 12 configurations each, one seed, 3,000 checker calls per configuration, counting every call including the verification of the 1,000 V contexts (about 2,000 calls of learning); the selection rule above is unchanged. The original text above stays visible.)*
 
 Sensitivity rules (C107, span/200, total load with span/250) are evaluated with enumeration, ordered scan, heuristic iteration and the classifier; RL is not retrained for them unless the primary rule changes by amendment.
 
@@ -157,14 +157,14 @@ RL is called safe and accurate in range only if, on T1 and T2:
 - S1 raw top-1 verified feasibility >= 0.99 in every seed.
 - S2 median gap <= 2% (T1) and <= 3% (T2) for the median seed.
 
-Efficiency is claimed only if N* against heuristic iteration (the cheapest conventional method) is finite and below N_ref = 10,000 design tasks, at equal feasibility and gap, with seed spread shown. N_ref was fixed in v1.0.
+Efficiency is claimed only if N* against heuristic iteration (the cheapest conventional method) is finite and below N_ref = 10,000 design tasks, at equal feasibility and gap, with seed spread shown. N_ref was fixed in v1.0. *(Amendment A5, 2026-11-14, fixed before any RL run: "equal feasibility and gap" means the learned policy's verified feasibility after repair is 1.0 and its mean gap is at most 0.5 percentage points — the tuning threshold of section 9 — on the set where the comparison is made; feasibility, gap and N* are reported together, and the efficiency claim is made only where the learned policy matches the heuristic on both. S2's thresholds (2% on T1, 3% on T2) are success criteria for the quality claim, not a tolerance for N*. The original text above stays visible.)*
 Diversity (RQ5): F2 is called diverse if its median count is at least 3 on contexts where the reference has at least 3 such sections.
 Extrapolation (T3) is reported descriptively without a threshold.
 
 "Method A better than B on metric M" is a confirmatory claim only within the primary family, fixed before runs (at most four comparisons):
 - P1 best RL configuration vs heuristic iteration, end-to-end checker calls per verified design.
 - P2 best RL configuration vs supervised MLP variant (i) at matched checker calls, gap on T1.
-- P3 best RL configuration vs DE at budget 20, gap on T1.
+- P3 best RL configuration vs DE at budget 20, gap on T1. *(Amendment A5, 2026-11-14, before any run: P3 compares against the categorical-native GA at budget 20 instead of DE; the comparator is still stochastic, so the permutation test stands. The original text above stays visible.)*
 - P4 F2 vs F1 sampled output, diversity count.
 "Best RL configuration" is fixed on V before testing: highest verified feasibility, then lowest gap, then fewest calls.
 Inference: (a) context level: paired bootstrap (10,000 resamples) of the mean per-context difference, averaged over seeds, 95% interval; (b) seed level: against a deterministic comparator (heuristic iteration, ordered scan, enumeration), exact two-sided sign-flip test of the 10 seed-level differences to the comparator's value (smallest p = 0.002); against a stochastic comparator (DE, GA, random search, the classifier trained with seeds 0-9, F1 vs F2), exact two-sided permutation test on the seed-level means (184,756 arrangements). With 5 seeds the smallest attainable p is 0.0625, so 10 seeds are used. Holm correction over the four comparisons. A claim needs all three: Holm-adjusted seed-level p < 0.05; a context-level 95% interval excluding zero; and a mean difference of at least 1 percentage point of gap, 20% of checker calls, or 1 section for diversity. Effect sizes with intervals are always reported. All other comparisons are exploratory and labelled so. Otherwise: no difference claimed. If enumeration, ordered scan, heuristic iteration, GA, DE or the classifier is better, that is reported as such. If S1 or S2 fail, the paper reports RL as not meeting the criteria.
@@ -240,7 +240,7 @@ Governing narrative: `docs/proposal.md` (one journal paper). Status: **proposed,
    - F1 (refinement, R1): DQN; Double DQN; Dueling Double DQN with prioritised replay and n-step returns; discrete PPO; discrete SAC.
    - F2 (constructive, R3): conditional GFlowNet (diversity).
    - Reward variants R2, R-C and R-D are run for the best F1 algorithm selected on V.
-   - About 110 runs in total (8 algorithm-formulation entries and 3 reward variants, 10 seeds each). The primary comparisons P1 to P4 of section 11 use the best configuration selected on V.
+   - About 110 runs in total (8 algorithm-formulation entries and 3 reward variants, 10 seeds each). The primary comparisons P1 to P4 of section 11 use the best configuration selected on V. *(Superseded by Amendment A5, 2026-11-14, before any run: Stage 1 runs three algorithm-formulation entries; the original text above stays visible.)*
 5. **Reward families** (R1 to R3 as in section 9; R3 is for F2 only):
    - **R-A = R1**, reference-relative terminal reward. **R-B = R2**, potential-based shaping.
    - **R-C Lagrangian (new):** the environment reward is R1, unchanged. The training loss adds lambda * c with cost c = max(0, max utilisation - 1) of the accepted design and a multiplier updated by dual ascent (lambda <- max(0, lambda + eta * (mean c - 0))). The ordering rule holds for the environment reward; feasibility is judged on verified output, never on the penalised objective.
@@ -357,3 +357,37 @@ Background: the P9 full run (`paper/tables/p9_horizon.csv`, committed) found 17 
 Change: wherever this specification says the F1 horizon is 12 steps, it now reads 13 steps (the sentences in section 9 keep their original text visible, with the amendment noted next to them). The new horizon H = 13 is the largest F1 distance from the trial section to the optimum observed over all 34,841 contexts; 17 contexts need exactly 13. Consequences, checked in code (`src/ub_rl/reward_checks.py`, `src/ub_rl/landscape.py`): R1 keeps its step cost 0.001, the total step cost is at most 13 x 0.001 = 0.013, below the margin of 1, so the feasible-over-infeasible ordering still holds (R1/R2/R-C margin bound 1 - 0.013 = 0.987); R-D keeps kappa = 0.5 / 13, so kappa x N_max = 0.5 exactly, meeting kappa x N_max <= 0.5 with equality. No physics, checker, objective or split is changed. The horizon check in `scripts/landscape_diagnostics.py` now uses HORIZON_F1 = 13; the P9 tables and the Gate 3 record are regenerated by the full rerun.
 
 Amendment name: the name A3 was reserved for the Stage 2 amendment (patch P14) in section 12; that reservation moves to A4.
+
+### Amendment A5 (2026-11-14, before any run): Stage 1 scope trim
+
+Status: approved before any run. **Approved by Dr Mudasir Hussain (supervisor), recorded by the project lead on his instruction, 2026-11-14.** Source document: `docs/scope_trim_proposal.md` (committed on branch `review`). A4 stays reserved for Stage 2 (patch P14). Where this amendment and an earlier statement disagree, the amendment governs for the runs it names; the earlier text is kept visible as the record. A5 does not change Stage 2, the checker, the physics, the objective, the splits or the success criteria.
+
+*Superseded (kept visible)*: A1 change 4, "Algorithms (Stage 1 tournament matrix): each algorithm is run on the formulations it supports, under equal tuning effort (12 configurations each, selection on V only), seeds 0 to 9, 200,000 checker calls per run, as in section 9. — F0 (direct choice, R1): REINFORCE with a learned baseline; discrete PPO. — F1 (refinement, R1): DQN; Double DQN; Dueling Double DQN with prioritised replay and n-step returns; discrete PPO; discrete SAC. — F2 (constructive, R3): conditional GFlowNet (diversity). — Reward variants R2, R-C and R-D are run for the best F1 algorithm selected on V. — About 110 runs in total (8 algorithm-formulation entries and 3 reward variants, 10 seeds each)."
+
+*Replaced by*: Stage 1 runs three algorithm-formulation entries with 10 seeds each: F0-R1 REINFORCE with a learned baseline; F1-R1 Dueling Double DQN with prioritised replay and n-step returns; F2-R3 conditional GFlowNet. 200,000 checker calls per run; sample-efficiency curves at 10,000, 50,000 and 200,000 calls; 12 configurations per entry selected on V; pilots as registered. The other tournament entries (discrete PPO on F0; DQN, Double DQN, discrete PPO and discrete SAC on F1; R2 and R-D on the best F1) are not run unless reinstated by a further dated amendment.
+
+*Superseded (kept visible)*: section 9 baselines, "GA and DE over C at evaluation budgets 10, 20, 50, |C|; seeds 0-9. Section order sensitivity: mass order and three random permutations; plus a categorical-native variant (uniform crossover, random-section mutation)."
+
+*Replaced by*: one GA, the categorical-native variant, at budgets 20 and |C|, mass order only, seeds 0-9. DE and the remaining orderings and budgets are not run unless reinstated by a further dated amendment. GA tuning: 12 configurations on V, budgets 20 and |C|, seeds 0-2; these calls are added to the GA's cost as section 9 requires.
+
+*Superseded (kept visible)*: section 9, "Supervised MLP, three variants: (i) enumeration labels at matched calls, floor(200,000/|C|) = 2,197 labels; (ii) heuristic-iteration labels at matched calls (label cost = calls used; optimality not certified, audited against enumeration on V); (iii) 20,000 enumeration labels, unmatched, as a favourable reference."
+
+*Replaced by*: variant (i) only (matched calls, 2,197 labels); (ii) and (iii) are not run unless reinstated by a further dated amendment.
+
+*Superseded (kept visible)*: section 11 primary family, "P3 best RL configuration vs DE at budget 20, gap on T1." *Replaced by*: P3 best RL configuration vs the categorical-native GA at budget 20, gap on T1. The comparator is still stochastic, so the permutation test stands; Holm correction over the four comparisons is unchanged; P1, P2 and P4 are unchanged.
+
+*Tuning budget for the RL entries (new, fixed here because section 9 does not fix it)*: 12 configurations per entry, one seed each, 3,000 checker calls per configuration, counting every call it makes, including the verification of the 1,000 V contexts (about 2,000 calls of learning). A pilot run counts its 10,000 training calls plus 1,000 V verification calls. The selection rule of section 9 is unchanged.
+
+*N\* rule if the V-selected best configuration is F1 (new, because section 10 gives F1 a per-task cost of its step count)*: N* is computed per section 10 for whichever entry is selected on V. If the selected entry is F1, its per-task cost is its measured mean step count plus repair calls, and the efficiency claim then stands or falls on F1's measured calls.
+
+*Cost-accounting convention for T (new, fixed here because the spec does not say)*: the one-off cost T of one deployed policy counts one training run up to the checkpoint, that entry's own tuning and its own pilot, and no label calls (F0 and F2 use none); every checker call counts, including the 1,000 V verification calls of a tuning configuration or pilot run. Under the alternative of counting the training of all ten seeds, no checkpoint could meet the efficiency bar.
+
+*Safety trigger for R-C (new, fixed before any pilot)*: if, in the pilots on V, no F0, F1 or F2 entry reaches raw top-1 verified feasibility of at least 0.99 in every pilot seed, R-C is run on the best F1 entry; R-C's constants are frozen at Gate 4. If the trigger does not fire, R-C is not run. The trigger is a pilot-based early warning only: if S1 later fails on T1/T2 at P13, the paper reports RL as not meeting the criteria (no rescue run), per section 11.
+
+**"Equal feasibility and gap" in N\* (new, fixed before any RL run)**: section 11 requires N* "at equal feasibility and gap" but defines no tolerance, and S2 (median gap <= 2% on T1 and <= 3% on T2 for the median seed) is a quality success criterion, not a tolerance for N*. A5 fixes the reading: the learned policy is at equal feasibility and gap when its verified feasibility after repair is 1.0 and its mean gap is at most 0.5 percentage points — the tuning threshold of section 9 — on the set where the comparison is made. Feasibility, gap and N* are reported together; the efficiency claim is made only where the learned policy matches the heuristic on both.
+
+*Effect on compute (estimate, assumptions stated in `docs/scope_trim_proposal.md` section 4)*: about 181.4 M checker calls before the trim, about 20.8 M after (about 9x less); 110 RL runs to 30.
+
+*Order of work (recorded with A5)*: P12 is split — P12a pilots and tuning right after P10 and P11, the Stage 2 audit (P14 to P16) before the Stage 1 freeze (P12b) and the Stage 1 runs (P13), following the parallel-work suggestion in `docs/project_review.md` section 8; `docs/patch_plan.md` records this order.
+
+*Unchanged by A5*: checker, physics, objective, splits and their hashes, the ten-seed statistics, the definition of N* and N_ref = 10,000, S1/S2 (Stage 1), S3 to S6 (Stage 2), the gate ordering. `docs/proposal.md` keeps its words and gets one dated note in section 6.

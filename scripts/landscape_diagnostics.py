@@ -371,7 +371,9 @@ def render_gate3(path, summary, hashes, commit, dirty, limit):
     sets = [s for s in SET_ORDER if s in summary["sets"]]
     sat = {r["set"]: r for r in summary["saturation"]}
     val = sat["val"]
-    lines = ["# Gate 3 record - P9 landscape and saturation diagnostics", ""]
+    lines = ["# Gate 3 record - P9 landscape and saturation diagnostics", "",
+             "Gate 3 acceptance: Approved by Dr Mudasir Hussain (supervisor), recorded by the project lead "
+             "on his instruction, 2026-11-14.", ""]
     lines += [f"Provenance: `scripts/landscape_diagnostics.py`, commit {commit},"
               f"{' working tree dirty' if dirty else ' clean'}; environment `src/ub_rl/checker.py` "
               f"sha256 {hashes[ENV_FILE][:16]}...; catalogue workbook sha256 {summary['catalogue_sha256'][:16]}...; "
