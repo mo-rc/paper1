@@ -1,6 +1,8 @@
 # Gate 3 record - P9 landscape and saturation diagnostics
 
-Provenance: `scripts/landscape_diagnostics.py`, commit 34825581c73cba515ea666ad52297b6ad952d302, clean; environment `src/ub_rl/checker.py` sha256 3b6ab914e350726f...; catalogue workbook sha256 190e17b694bdb27a...; split manifest `data/splits/SHA256SUMS` sha256 51050584ac1d1488...; catalogue C (91 sections); 34841 contexts (full run); heuristic call accounting measured by the checker wrapper. Generated deterministically; `--check` reproduces this record byte for byte.
+Gate 3 acceptance: Approved by Dr Mudasir Hussain (supervisor), recorded by the project lead on his instruction, 2026-11-14.
+
+Provenance: `scripts/landscape_diagnostics.py`, commit b1eb16cdd93c5126fd975c79af560b333187f06c, clean; environment `src/ub_rl/checker.py` sha256 3b6ab914e350726f...; catalogue workbook sha256 190e17b694bdb27a...; split manifest `data/splits/SHA256SUMS` sha256 51050584ac1d1488...; catalogue C (91 sections); 34841 contexts (full run); heuristic call accounting measured by the checker wrapper. Generated deterministically; `--check` reproduces this record byte for byte.
 
 ## Saturation (headline line: V)
 
