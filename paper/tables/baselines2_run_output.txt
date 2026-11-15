@@ -1,0 +1,44 @@
+# P8 Stage 1 baselines II: run-output snapshot (2026-11-15, --limit 100 sample)
+# Run made from commit 54db07a848c86ceacd3c92a85f0898770c260a0a (clean working tree).
+# Printed output of: python scripts/baselines2_summary.py results/baselines2
+# The SHA-256 lines below are the sha256sum of the result files (the same hashes are recorded in each *_meta.json).
+# results/ stays git-ignored; archive the folder (e.g. Zenodo) at submission.
+# The GA fitness uses utilisation overrun for infeasible sections; the budget-91 result is a cost data point, not a GA-quality result (recorded in run_summary.json).
+test_t1       ga    budget  20  exact    184  false-abstain    194  mean gap  15.023%  (rows 1000)
+test_t1       ga    budget  91  exact    810  false-abstain      0  mean gap   0.000%  (rows 1000)
+test_t1       mlp   budget   -  exact    473  false-abstain      1  mean gap  17.641%  (rows 1000)
+test_t2       ga    budget  20  exact    168  false-abstain    215  mean gap  16.462%  (rows 1000)
+test_t2       ga    budget  91  exact    800  false-abstain      0  mean gap   0.000%  (rows 1000)
+test_t2       mlp   budget   -  exact    482  false-abstain      0  mean gap  15.197%  (rows 1000)
+test_t3       ga    budget  20  exact     73  false-abstain     90  mean gap  13.648%  (rows 1000)
+test_t3       ga    budget  91  exact    320  false-abstain      0  mean gap   0.000%  (rows 1000)
+test_t3       mlp   budget   -  exact    290  false-abstain      2  mean gap   1.647%  (rows 1000)
+test_t4       ga    budget  20  exact    204  false-abstain    152  mean gap  14.957%  (rows 1000)
+test_t4       ga    budget  91  exact    920  false-abstain      0  mean gap   0.000%  (rows 1000)
+test_t4       mlp   budget   -  exact    488  false-abstain      1  mean gap  22.388%  (rows 1000)
+test_t5       ga    budget  20  exact    207  false-abstain     22  mean gap  18.744%  (rows 1000)
+test_t5       ga    budget  91  exact   1000  false-abstain      0  mean gap   0.000%  (rows 1000)
+test_t5       mlp   budget   -  exact    147  false-abstain      0  mean gap  63.129%  (rows 1000)
+reference     ga    budget  20  exact      6  false-abstain      0  mean gap  21.244%  (rows 40)
+reference     ga    budget  91  exact     40  false-abstain      0  mean gap   0.000%  (rows 40)
+
+373e62cba7bf566b6d75277181ab389cc553d05f9524225259ccf16e96b51708  ga_reference.csv
+68950b303469065819014b0cbe0a192402270829465ab8dacd188e02424b6ad1  ga_test_t1.csv
+d86bd9cad1e882a201bad55edbd868b6871c4d2b85a92000f430494c5e07bd9b  ga_test_t2.csv
+621b18e28e401e98e89993ec4937e1de8154b46f92b4dae108009a90b1016b58  ga_test_t3.csv
+37f68aacc2980683455a45f2fa3ea905bf0aa3aef2b273cee9eb848b6ef074c9  ga_test_t4.csv
+56f4f9893977b8d548c5b95e33c596754bcb90951238fce2bc32e81030ed0922  ga_test_t5.csv
+ee5969b5bd776245554793de29a9109d73d84a0e7e0cea1601e43475f3cf0b4f  ga_tune.csv
+8341f48c30e5bf55924c27f1637d62ac2911aec76a6537ac368caefc2e2a272a  mlp_test_t1.csv
+e593e3d8940cb48134753b69f1a7c83ee3f803f8552283094ea7f0f035aa646e  mlp_test_t2.csv
+c30593c39a0ffdec1bc6705752da9eea054841fc7a1a735224a442d0a4f8d93c  mlp_test_t3.csv
+a48f4aaf363c7d8e97656ac3b80cb54d7734a95bf62c8aa46d71470e60137247  mlp_test_t4.csv
+c1d963b8b5042e5237761d83ef8f3416ecf40b02c013eaab14bc09ec1c035aa3  mlp_test_t5.csv
+3b803792d81eebf7bedcbb32b7ac07227dd4e6e54c8c7e9a0b10252659fcbc34  mlp_tune.csv
+8f49bc58f7cfc6876af615188f31cc6d7f11dca313b45a905af146a875dbe734  ref_reference.csv
+ae6733e398e6278193fe4cb566855afad8033adaacc07bc3c2840353501dc51c  ref_test_t1.csv
+52edd0031db65150dfd9462b000fcd2aa5b7f8ca8c57780f591d9430916d2b2a  ref_test_t2.csv
+eb1f267abda579cd2b4525993c57ebec364268aa90669c0d6bc935ca7de96a42  ref_test_t3.csv
+7dd35079a3645e57139eb516bb09cdc9dc66cc6d4d88233a6cbae8e60269131c  ref_test_t4.csv
+baf03a9c487221843ba7d1437283df691dc3218d55f690cfaaafdb30613e6cc5  ref_test_t5.csv
+3207492ad21ae6eab47b3961f85c11a2e0b2bd627812d28817cc785122d4bdc3  ref_val.csv
