@@ -215,3 +215,9 @@ Run by the project lead (machine in `results/baselines1/*_meta.json`) on `review
 - Reward ordering on V (1,000 contexts): the assertion passed for every family (R1, R2, R3 at beta 25/50/100, R-C, R-D), 796 non-vacuous. The minimum margins sit exactly at the analytic bounds — 0.987 for R1/R2/R-C, 10 for R3, 0.5 for R-D — as predicted, attained by the val contexts whose heaviest feasible section is the heaviest section of C.
 
 Gate 3 acceptance is complete: the diagnostics are reproducible by the one script (`--check`), the P7 snapshot is reproduced exactly, and the Gate 3 record states the saturation outcome per context set and the amended horizon.
+
+## P8: Stage 1 baselines II verification (2026-11-16)
+
+- P8 full run started just before commit 0314bde; the file hashes recorded by the run match the content committed in 0314bde, so the run is reproducible from that commit.
+- GA code identity confirmed by a --limit 100 rerun (results/check100): all 7,200 ga_tune.csv rows identical to the full run's rows for the same V contexts, configuration, budget and seed (status, section index, gap, calls, verification fields; wall times excluded).
+- MLP label accounting confirmed on the sample ((78 + 22) x 91 = 9,100 calls).
