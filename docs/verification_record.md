@@ -221,3 +221,11 @@ Gate 3 acceptance is complete: the diagnostics are reproducible by the one scrip
 - P8 full run started just before commit 0314bde; the file hashes recorded by the run match the content committed in 0314bde, so the run is reproducible from that commit.
 - GA code identity confirmed by a --limit 100 rerun (results/check100): all 7,200 ga_tune.csv rows identical to the full run's rows for the same V contexts, configuration, budget and seed (status, section index, gap, calls, verification fields; wall times excluded).
 - MLP label accounting confirmed on the sample ((78 + 22) x 91 = 9,100 calls).
+
+## P10: Stage 1 RL environments and rewards (2026-11-16)
+
+- P10 built F0, F1 (horizon 13), F2 with R1 and R3, per `docs/p10_plan.md` — `src/ub_rl/envs.py` and `tests/test_envs.py` only; the `slow` marker is registered in `tests/conftest.py`. The envs import N_MAX, STEP_COST_R1 and R3_BETAS from `reward_checks.py` (no copies) and reuse `baselines.trial_index` and the CountingChecker; calls are measured by the CountingChecker, `env.calls` is per episode and the cumulative budget is `kc.sections`. No algorithms, no training, no result files.
+- Full-V ordering check passed over all 1,000 V contexts (4.6 s), run by the project lead.
+- Full suite run by the project lead: 226 passed, 1 skipped (the full-V test, by design), 1 xfailed (the strict A6 test 14, a recorded negative result, not a regression).
+- Carried to P11: F1 steps-taken feature, per-move versus terminal step cost, utilisation scaling or clipping, which F1 cost (steps or calls) goes into N*, F2 greedy tie-break to the lowest mass index.
+- **Approved by Dr Mudasir Hussain (supervisor), recorded by the project lead on his instruction, 2026-11-16.**

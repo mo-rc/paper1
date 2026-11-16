@@ -5,6 +5,10 @@ from ub_rl.catalogue import parse_workbook
 XLSX = os.path.join(os.path.dirname(__file__), "..", "data", "raw", "UB-secpropsdimsprops-EC3UKNA-UK-10-16-2026.xlsx")
 
 
+def pytest_configure(config):
+    config.addinivalue_line("markers", "slow: long-running check the project lead runs himself")
+
+
 @pytest.fixture(scope="session")
 def raw_path():
     if not os.path.exists(XLSX):
