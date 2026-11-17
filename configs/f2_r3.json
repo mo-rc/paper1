@@ -1,0 +1,12 @@
+{
+  "entry": "f2_r3",
+  "provisional": true,
+  "note": "Working defaults, marked provisional - the registered values are tuned in P12a and frozen at P12b (docs/p11_plan.md section 2). P11 runs nothing with this file.",
+  "seed": 0,
+  "budget": 200000,
+  "checkpoints": [10000, 50000, 200000],
+  "budget_includes_eval": false,
+  "eval_contexts": "val",
+  "network": {"hidden": [64, 64], "lr": 0.001},
+  "f2": {"beta": 50, "batch_size": 64, "logz_lr": 0.001}
+}

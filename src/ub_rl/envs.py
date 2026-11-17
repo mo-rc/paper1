@@ -25,8 +25,8 @@ environment's arithmetic. `env.calls` is a per-episode counter (baselined at res
 by reset_calls()); the cumulative budget across episodes and phases is `kc.sections`, the checker's
 own counter - never reset. The observation scales the context with fixed constants from the A2
 registered ranges and the section geometry with the catalogue maxima - never data statistics.
-`info` reports steps, calls and each step's max utilisation (the hook R-C would need; no R-C code
-here).
+`info` reports steps, calls, the sampled section's feasibility (P11: the F0/F2 sampling call is the
+verification) and each step's max utilisation (the hook R-C would need; no R-C code here).
 """
 import math
 
@@ -45,6 +45,11 @@ A2_DEAD_KNM2 = 5.0
 A2_LIVE_KNM2 = 5.0
 A2_DEPTH_CAP_MM = 900.0
 RULE_ORDER = tuple(sorted(DEFLECTION_RULES))  # fixed one-hot order ("tot250", "var200", "var360")
+
+# P11 (plan decision 3c): fixed utilisation bound for the F1 observation. u_scaled = clip(u, 0, 2)/2
+# keeps the feasibility boundary 1.0 at a fixed linear position (0.5) with no distortion around it
+# and caps extreme infeasibility at twice capacity. An engineering bound, never a data statistic.
+U_CLIP = 2.0
 
 
 def r1_log_return(mass_kg_m, m_trial, m_max, feasible, steps):
@@ -168,8 +173,14 @@ class F1Env(_EnvBase):
         return self.obs()
 
     def obs(self):
+        """P11 (plan decision 3a/3c): 9 context + 5 section + 7 clipped utilisations + steps/13 = 22
+        entries. The steps-taken feature makes the value of a state depend on the remaining horizon
+        (a recorded clarification of the spec observation list); the utilisation entries are
+        clip(u, 0, U_CLIP)/U_CLIP, fixed constants, never data statistics."""
         feasible, u = self.visited[self.i]
-        return np.concatenate([self._context_obs(self.ctx), self._section_obs(self.i), u])
+        u_scaled = np.clip(u, 0.0, U_CLIP) / U_CLIP
+        return np.concatenate([self._context_obs(self.ctx), self._section_obs(self.i), u_scaled,
+                               [self.steps / N_MAX]])
 
     def _land(self, i):
         if i not in self.visited:  # a revisit costs a step but no call
@@ -232,7 +243,8 @@ class F0Env(_EnvBase):
         r = r1_log_return(self.kc.mass[int(i)], self.m_trial, self._m_max, feasible, 0)
         self.done = True
         return self.obs(), r, self.done, {"steps": 0, "calls": self.calls,
-                                          "max_utilisation": [float(u.max())]}
+                                          "max_utilisation": [float(u.max())],
+                                          "feasible": feasible}
 
     def obs(self):
         return np.asarray(self._context_obs(self.ctx), dtype=np.float64)
@@ -272,15 +284,18 @@ class F2Env(_EnvBase):
         r = r3_log_return(self.kc.mass[i], self.m_trial, self._m_max, feasible, beta)
         self.done = True
         return self.obs(), r, self.done, {"steps": 0, "calls": self.calls,
-                                          "max_utilisation": [float(u.max())]}
+                                          "max_utilisation": [float(u.max())],
+                                          "feasible": feasible}
 
     def greedy(self, p_series, p_variant):
-        """Exact arg max over C of P(series) P(variant | series)."""
+        """Exact arg max over C of P(series) P(variant | series); exact ties go to the lowest mass
+        index (P11 plan decision 3e: the strict > kept the first max in series-then-variant
+        iteration order, which is not the mass order)."""
         best_i, best_p = -1, float("-inf")
         for k, s in enumerate(self.series):
             for j, i in enumerate(self.variants[s]):
                 p = p_series[k] * p_variant[k][j]
-                if p > best_p:
+                if p > best_p or (p == best_p and i < best_i):
                     best_i, best_p = i, p
         return best_i
 

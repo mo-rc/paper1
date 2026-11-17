@@ -1,0 +1,21 @@
+{
+  "entry": "f1_r1",
+  "provisional": true,
+  "note": "Working defaults, marked provisional - the registered values are tuned in P12a and frozen at P12b (docs/p11_plan.md section 2). P11 runs nothing with this file. The A5 evaluation budget for F1 (1,000 V contexts cost 10,000+ calls against a 3,000-call tuning budget) stays an open item for Amendment A7 before P12a.",
+  "seed": 0,
+  "budget": 200000,
+  "checkpoints": [10000, 50000, 200000],
+  "budget_includes_eval": false,
+  "eval_contexts": "val",
+  "network": {"hidden": [64, 64], "lr": 0.001},
+  "f1": {
+    "gamma": 1.0,
+    "n": 5,
+    "epsilon": 0.1,
+    "batch_size": 32,
+    "replay_size": 10000,
+    "alpha": 0.6,
+    "beta_anneal_steps": 50000,
+    "target_sync": 100
+  }
+}

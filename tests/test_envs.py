@@ -189,6 +189,23 @@ def test_f1_calls_equal_distinct_visited_with_revisit_and_noop(kc, C):
     assert env.i == 0
 
 
+def test_f1_observation_22dim_steps_and_clipped_utilisation(kc):
+    """P11: the F1 observation is 22 entries (9 context + 5 section + 7 utilisation + steps/13); the
+    utilisation entries are clip(u, 0, 2)/2 with the fixed bound (never data statistics) and the
+    steps-taken feature is steps/13 at every step."""
+    ctx = _val_ctxs()[0]
+    env = envs.F1Env(kc)
+    obs = env.reset(ctx)
+    assert obs.shape == (22,)
+    assert obs[-1] == 0.0  # steps/13 at reset
+    u_raw = kc.evaluate_context(ctx, [env.i])["U"][0]  # a fresh raw evaluation
+    assert obs[14:21] == pytest.approx(np.clip(u_raw, 0.0, 2.0) / 2.0, abs=1e-12)
+    obs2, _, _, _ = env.step("up")
+    assert obs2.shape == (22,) and obs2[-1] == 1.0 / 13
+    u_raw2 = kc.evaluate_context(ctx, [env.i])["U"][0]
+    assert obs2[14:21] == pytest.approx(np.clip(u_raw2, 0.0, 2.0) / 2.0, abs=1e-12)
+
+
 # ------------------------------------------------------------------ F0 and F2
 def test_f0_bandit_semantics(kc):
     ctx = _val_ctxs()[0]
@@ -228,6 +245,46 @@ def test_f2_tree_and_greedy(kc):
         i = env.variants[env.series[1]][0]
         feasible = bool(kc.evaluate_context(ctx, [i])["feasible"][0])
         assert r == envs.r3_log_return(kc.mass[i], env.m_trial, kc.mass[-1], feasible, beta)
+
+
+def test_f2_greedy_ties_break_to_lowest_mass_index(kc):
+    """P11 plan decision 3e: two sections with exactly equal joint probability - the lighter (lower
+    mass index) must win, both across series and inside one series; the winner equals the exact
+    arg max of the joint vector over C."""
+    env = envs.F2Env(kc)
+    i0, i1 = env.variants[env.series[0]][0], env.variants[env.series[1]][0]  # two distinct series
+    p_s = np.zeros(len(env.series))
+    p_v = [np.zeros(len(env.variants[s])) for s in env.series]
+    p_s[0] = p_s[1] = 1.0
+    p_v[0][0] = p_v[1][0] = 0.5  # joint 0.5 each, everything else 0: an exact tie
+    assert env.greedy(p_s, p_v) == min(i0, i1)
+    joint = np.zeros(len(kc))
+    joint[[i0, i1]] = 0.5
+    assert env.greedy(p_s, p_v) == int(np.argmax(joint))  # argmax breaks ties the same way
+    # ties inside one series: the lightest variant of that series wins
+    k = next(k for k, s in enumerate(env.series) if len(env.variants[s]) >= 2)
+    s = env.series[k]
+    i2, i3 = env.variants[s][0], env.variants[s][1]
+    p_s[:] = 0.0
+    p_s[k] = 1.0
+    p_v[k][:] = 0.0
+    p_v[k][0] = p_v[k][1] = 0.5
+    assert env.greedy(p_s, p_v) == min(i2, i3)
+
+
+def test_f0_f2_info_reports_feasibility(kc):
+    """P11 harness: F0 and F2 info carries the sampled section's feasibility (info only; rewards,
+    calls and observations unchanged), matching a fresh checker evaluation."""
+    ctx = _val_ctxs()[0]
+    env = envs.F0Env(kc)
+    env.reset(ctx)
+    _, _, done, info = env.step(0)
+    assert done and info["feasible"] == bool(kc.evaluate_context(ctx, [0])["feasible"][0])
+    env = envs.F2Env(kc)
+    env.reset(ctx)
+    i = env.variants[env.series[1]][0]
+    _, _, done, info = env.step(1, 0, 50)
+    assert done and info["feasible"] == bool(kc.evaluate_context(ctx, [i])["feasible"][0])
 
 
 def test_reset_calls_rebaselines_the_counter(kc):
