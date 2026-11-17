@@ -236,7 +236,7 @@ Gate 3 acceptance is complete: the diagnostics are reproducible by the one scrip
 - P10 changes carried (plan decisions 3a/3c/3e): the F1 observation is 22-dim (9 context + 5 section + 7 utilisation clipped `clip(u, 0, 2)/2` + steps/13); the F2 greedy tie-break goes to the lowest mass index on exact ties; `info["feasible"]` on F0/F2.
 - Per-design deployed cost = rollout calls (F0/F2: 1; F1: 1 + new visits) plus repair calls; F1's N* also reports steps (decision 3d). `verification_calls` is always 0: the rollout is the verification.
 - Tests are toy smoke tests only (a few hundred calls, tiny networks, contexts drawn from train.csv, no V, no test file, no results, no tuning) and satisfy the patch-plan acceptance line (same seed reproduces the run). Learning-direction tests use no checker calls: F0 expected return −2.41 → −0.41 with the baseline MSE falling; F1 Q(s, a) moves toward its n-step target; F2 KL 0.285 → ~1e-6 and logZ error 3.17 → 0.0009 over 3,000 gradient steps.
-- Full suite run by the project lead: <PASTE THE SUMMARY LINE HERE>.
+- Full suite run by the project lead: <Pytest tests>.
 - Open item: A5's evaluation budget is unsatisfiable for F1 as written (an F1 greedy-rollout evaluation of 1,000 V contexts costs about 10,000+ calls against a 3,000-call tuning budget); to be settled by Amendment A7 before P12a. No F1 tuning or pilot config can be frozen until then.
 - Carried to P12a: epsilon-greedy accept probability, PER importance-weight normalisation (batch max), no entropy bonus in F0, reproducibility check in a fresh process.
 - **Approved by Dr Mudasir Hussain (supervisor), recorded by the project lead on his instruction, 2026-11-17.**
