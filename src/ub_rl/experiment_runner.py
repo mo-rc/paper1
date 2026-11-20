@@ -691,7 +691,7 @@ def run_experiments(kind: str) -> dict:
         else:
             outdir = RESULT_ROOT / "tune" / entry / f"cfg{slot:02d}"
         result = _run_one(run_kind, entry, config, run_id, outdir, manifest,
-                          masks, c.mass, eval_sha, seed=seed, slot=slot)
+                          masks, c["m"], eval_sha, seed=seed, slot=slot)
         if result["status"] != "complete":
             failures.append(run_id)
     if kind == "tune" and not failures:
