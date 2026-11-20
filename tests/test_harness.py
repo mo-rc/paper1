@@ -125,6 +125,7 @@ def test_committed_configs_load_and_are_provisional():
     for entry in ("f0_r1", "f1_r1", "f2_r3"):
         cfg = harness.load_config(ROOT / "configs" / f"{entry}.json")
         assert cfg.entry == entry and cfg.provisional is True
+        assert cfg.eval_repair is True
         assert cfg.budget == 200000 and cfg.checkpoints == (10000, 50000, 200000)
         assert cfg.budget_includes_eval is False and cfg.eval_contexts == "val"
     f1 = harness.load_config(ROOT / "configs" / "f1_r1.json")
@@ -157,6 +158,19 @@ def test_config_validation_rejects_bad_values():
         _cfg("f0_r1", 100, [50], eval_ctxs="val:0")  # a named subset must be non-empty
     with pytest.raises(ValueError):
         _cfg("f0_r1", 100, [50], eval_ctxs="test_t1")  # only val subsets are named
+
+
+@pytest.mark.parametrize("value", [0, 1, "false", "true", None, [], {}])
+def test_eval_repair_requires_a_boolean(value):
+    with pytest.raises(ValueError, match="eval_repair must be a boolean"):
+        _cfg("f0_r1", 10, [], eval_repair=value)
+
+
+def test_eval_contexts_val_count_uses_first_rows_in_file_order():
+    cfg = _cfg("f0_r1", 10, [], eval_ctxs="val:7")
+    resolved = harness._resolve_eval_contexts(cfg)
+    _, all_val = splits.load_split("val", root=ROOT / "data" / "splits")
+    assert [_ctx_sig(c) for c in resolved] == [_ctx_sig(c) for c in all_val[:7]]
 
 
 # ------------------------------------------------------------------ context stream and budget
@@ -260,26 +274,86 @@ def test_eval_calls_count_inside_the_budget_when_budget_includes_eval(tmp_path, 
     """budget_includes_eval=true (the tuning/pilot convention): the evaluation calls consume the
     budget; a threshold the evaluation overshoots is recorded as skipped, and training stops."""
     ctxs = _train_ctxs(8)
-    cfg = _cfg("f0_r1", budget=20, checkpoints=[6, 10], includes_eval=True, eval_ctxs=ctxs)
-    fresh = CountingChecker(Checker(C))
+    cfg = _cfg("f0_r1", budget=20, checkpoints=[6, 10], includes_eval=True,
+               eval_ctxs=ctxs, eval_repair=False)
     start = kc.sections
     summary = harness.run(cfg, ToyF0(), kc, tmp_path)
-    expected_repair = sum(_expected_repair(fresh, c) for c in ctxs)
-    total = 6 + 8 + expected_repair  # training portion 6, then the eval counts inside
-    assert summary["training_calls"] == total == kc.sections - start
+    assert summary["training_calls"] == 12
+    assert summary["eval_calls"] == 8 and summary["repair_calls"] == 0
+    assert summary["training_calls"] + summary["eval_calls"] == cfg.budget
+    assert summary["total_calls"] == kc.sections - start == cfg.budget
+    assert summary["unused_calls"] == 0
     assert summary["eval_calls"] == 8 and summary["verification_calls"] == 0
-    assert summary["repair_calls"] == expected_repair
     meta = json.loads((tmp_path / "run_meta.json").read_text())
     assert meta["checkpoints"] == [{"threshold": 6, "training_calls": 6},
                                    {"threshold": 10, "training_calls": "skipped"}]
+    assert meta["unused_calls"] == 0
     assert (tmp_path / "checkpoint_6.pt").exists() and not (tmp_path / "checkpoint_10.pt").exists()
+
+
+def test_budget_includes_eval_stops_after_final_f1_evaluation_and_records_unused_calls(
+        tmp_path, kc):
+    """The final evaluation can consume less than its reserved budget; training ends there."""
+    ctx = _train_ctxs(1)[0]
+    cfg = _cfg("f1_r1", budget=20, checkpoints=[16], includes_eval=True,
+               eval_ctxs=[ctx], eval_repair=False,
+               f1={"n": 5, "epsilon": 0.1, "gamma": 1.0, "alpha": 0.6,
+                   "beta_anneal_steps": 100, "batch_size": 8,
+                   "replay_size": 100, "target_sync": 10})
+    seen = []
+    start = kc.sections
+    summary = harness.run(cfg, ToyF1(seen), kc, tmp_path)
+    rows = [json.loads(line) for line in (tmp_path / "run.jsonl").read_text().splitlines()]
+    eval_pos = next(i for i, row in enumerate(rows) if row["event"] == "eval")
+    assert rows[eval_pos + 1]["event"] == "truncated"
+    assert rows[-1]["event"] == "summary"
+    assert len(seen) == 15  # eval fires after the 8th episode's move; no accept action follows
+    assert summary["training_calls"] == 16
+    assert summary["eval_calls"] == 1
+    assert summary["unused_calls"] == 3
+    assert summary["total_calls"] == 17 == kc.sections - start
+    meta = json.loads((tmp_path / "run_meta.json").read_text())
+    assert meta["unused_calls"] == 3
+    assert (tmp_path / "checkpoint_16.pt").exists() and (tmp_path / "eval_16.csv").exists()
+
+
+def test_budget_includes_eval_final_f1_checkpoint_at_reset_stops_before_action(tmp_path, kc):
+    ctx = _train_ctxs(1)[0]
+    cfg = _cfg("f1_r1", budget=20, checkpoints=[1], includes_eval=True,
+               eval_ctxs=[ctx], eval_repair=False,
+               f1={"n": 5, "epsilon": 0.1, "gamma": 1.0, "alpha": 0.6,
+                   "beta_anneal_steps": 100, "batch_size": 8,
+                   "replay_size": 100, "target_sync": 10})
+    seen = []
+    summary = harness.run(cfg, ToyF1(seen), kc, tmp_path)
+    assert seen == []  # reset reached the threshold; final evaluation precedes the first action
+    assert summary["training_calls"] == 1 and summary["eval_calls"] == 1
+    assert summary["unused_calls"] == 18
+    assert (tmp_path / "checkpoint_1.pt").exists() and (tmp_path / "eval_1.csv").exists()
+
+
+@pytest.mark.parametrize("entry", ["f0_r1", "f2_r3"])
+def test_budget_includes_eval_final_checkpoint_at_exact_threshold_with_batch_128(
+        tmp_path, kc, entry):
+    ctxs = _train_ctxs(2)
+    extra = {"f0": {"batch_size": 128}} if entry == "f0_r1" else {"f2": {"beta": 50, "batch_size": 128}}
+    cfg = _cfg(entry, budget=100, checkpoints=[4], includes_eval=True,
+               eval_ctxs=ctxs, eval_repair=False, **extra)
+    summary = harness.run(cfg, TOYS[entry](), kc, tmp_path / entry)
+    meta = json.loads((tmp_path / entry / "run_meta.json").read_text())
+    assert meta["checkpoints"] == [{"threshold": 4, "training_calls": 4}]
+    assert summary["training_calls"] == 4
+    assert summary["eval_calls"] == 2
+    assert summary["total_calls"] == 6
+    assert summary["unused_calls"] == 94
+    assert meta["unused_calls"] == 94
 
 
 def test_repair_steps_up_in_mass_order_and_abstains_at_the_end(tmp_path, kc, C):
     """The end-to-end repair (spec section 9): an infeasible greedy output is verified (1 call) and
     stepped up in mass order until feasible, with each repair step a counted call."""
     ctx = _train_ctxs(1)[0]
-    cfg = _cfg("f0_r1", budget=10, checkpoints=[5], eval_ctxs=[ctx])
+    cfg = _cfg("f0_r1", budget=10, checkpoints=[5], eval_ctxs=[ctx], eval_repair=True)
     fresh = CountingChecker(Checker(C))
     expected = _expected_repair(fresh, ctx)
     summary = harness.run(cfg, ToyF0(), kc, tmp_path)
@@ -326,6 +400,50 @@ def test_f1_eval_uses_the_rollout_cache_and_needs_no_verification(tmp_path, kc, 
     assert header == "index,output,feasible,repaired,repair_calls,steps,calls"
     cols = row.split(",")
     assert int(cols[1]) == out and int(cols[5]) == 1 and int(cols[6]) == 2
+
+
+def _infeasible_eval_context(kc, entry):
+    """Find a training context whose greedy toy output is infeasible for the given entry."""
+    for ctx in _train_ctxs(100):
+        output = baselines.trial_index(kc, ctx) if entry == "f1_r1" else 0
+        if not kc.evaluate_context(ctx, [output])["feasible"][0]:
+            return ctx
+    raise AssertionError(f"no infeasible toy output found for {entry}")
+
+
+@pytest.mark.parametrize("entry", ["f0_r1", "f1_r1", "f2_r3"])
+def test_eval_repair_disabled_keeps_infeasible_output_and_counts_only_rollout(
+        tmp_path, kc, entry, monkeypatch):
+    ctx = _infeasible_eval_context(kc, entry)
+    if entry == "f1_r1":
+        calls = []
+        original_land = envs.F1Env._land
+
+        def tracked_land(env, i):
+            calls.append(i)
+            return original_land(env, i)
+
+        monkeypatch.setattr(envs.F1Env, "_land", tracked_land)
+    else:
+        calls = None
+    extra = {"f1": {"n": 5, "epsilon": 0.1, "gamma": 1.0, "alpha": 0.6,
+                     "beta_anneal_steps": 100, "batch_size": 8,
+                     "replay_size": 100, "target_sync": 10}} if entry == "f1_r1" else {}
+    if entry == "f2_r3":
+        extra = {"f2": {"beta": 50}}
+    cfg = _cfg(entry, budget=1, checkpoints=[1], eval_ctxs=[ctx], eval_repair=False, **extra)
+    start = kc.sections
+    summary = harness.run(cfg, TOYS[entry](), kc, tmp_path / entry)
+    header, line = (tmp_path / entry / "eval_1.csv").read_text().splitlines()
+    row = dict(zip(header.split(","), line.split(",")))
+    assert int(row["feasible"]) == 0
+    assert row["repaired"] == row["output"]
+    assert int(row["repair_calls"]) == summary["repair_calls"] == 0
+    assert summary["total_calls"] == summary["training_calls"] + summary["eval_calls"]
+    assert kc.sections - start == summary["training_calls"] + summary["eval_calls"]
+    if calls is not None:
+        # One _land() at each env reset verifies the trial section; there is no extra repair _land().
+        assert len(calls) == 2
 
 
 def test_f0_and_f2_per_design_calls_are_one_before_repair(tmp_path, kc, C):

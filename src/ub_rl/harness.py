@@ -77,6 +77,7 @@ class RunConfig:
     eval_contexts: object  # None | "val" | "val:N" | list of Context objects (in-memory use only)
     network: dict         # {"hidden": [...], "lr": ...}: working defaults, marked provisional
     extra: dict           # entry-specific fields: f1 {gamma, n, epsilon, ...} / f2 {beta}
+    eval_repair: bool = True
     provisional: bool = True
 
     @staticmethod
@@ -99,6 +100,8 @@ class RunConfig:
                 raise ValueError(f"checkpoint {cps[-1]} exceeds the budget {budget}")
         if not isinstance(cfg.get("budget_includes_eval", False), bool):
             raise ValueError("budget_includes_eval must be a boolean")
+        if not isinstance(cfg.get("eval_repair", True), bool):
+            raise ValueError("eval_repair must be a boolean")
         net = cfg.get("network", {})
         hidden = [int(x) for x in net.get("hidden", ())]
         if not hidden or not all(h > 0 for h in hidden):
@@ -145,6 +148,7 @@ class RunConfig:
         return RunConfig(entry=entry, seed=seed, budget=budget, checkpoints=cps,
                          budget_includes_eval=cfg.get("budget_includes_eval", False),
                          eval_contexts=ev, network=net, extra=extra,
+                         eval_repair=cfg.get("eval_repair", True),
                          provisional=bool(cfg.get("provisional", True)))
 
 
@@ -248,7 +252,7 @@ def _evaluate(cfg, agent, eval_env, kc, outdir, th, log):
             # the rollout already observed the accepted section: no separate verification call
             feasible, _ = eval_env.visited[eval_env.i]
             repaired, rc = output, 0
-            if not feasible:  # repair through the episode cache: a visited section costs no call
+            if cfg.eval_repair and not feasible:  # repair through the episode cache
                 for i in range(output + 1, len(kc)):
                     new = i not in eval_env.visited
                     eval_env._land(i)
@@ -261,7 +265,7 @@ def _evaluate(cfg, agent, eval_env, kc, outdir, th, log):
         else:  # F0/F2: the greedy step's checker call IS the verification (one call per sample)
             feasible = bool(info["feasible"])
             repaired, rc = output, 0
-            if not feasible:  # repair: one counted fresh call per section, up in mass order
+            if cfg.eval_repair and not feasible:  # repair: one counted fresh call per section
                 for i in range(output + 1, len(kc)):
                     e = kc.evaluate_context(ctx, [i])
                     rc += 1
@@ -331,6 +335,8 @@ def run(cfg, agent, kc, outdir):
     run_start = kc.sections
     eval_total = verify_total = repair_total = 0
     thresholds = list(cfg.checkpoints)
+    final_threshold = thresholds[-1] if thresholds else None
+    final_checkpoint_evaluated = False
     fired = []  # (threshold, actual training calls at the boundary) or (threshold, "skipped")
     n_episodes = 0
 
@@ -345,7 +351,7 @@ def run(cfg, agent, kc, outdir):
         a threshold reached by an F1 reset - or by the run's final call - still fires, and the
         end-of-run assert can never trip. At most one checkpoint fires per boundary call; a
         threshold its evaluation overshoots (only when the budget includes eval) is skipped."""
-        nonlocal eval_total, verify_total, repair_total
+        nonlocal eval_total, verify_total, repair_total, final_checkpoint_evaluated
         tc = training_calls()
         if thresholds and tc >= thresholds[0]:
             th = thresholds.pop(0)
@@ -356,6 +362,8 @@ def run(cfg, agent, kc, outdir):
                 eval_total += ev["eval_calls"]
                 verify_total += ev["verification_calls"]
                 repair_total += ev["repair_calls"]
+            if cfg.budget_includes_eval and th == final_threshold:
+                final_checkpoint_evaluated = True
         while thresholds and training_calls() >= thresholds[0]:
             skipped = thresholds.pop(0)
             log({"event": "checkpoint_skipped", "threshold": skipped,
@@ -363,14 +371,14 @@ def run(cfg, agent, kc, outdir):
             fired.append((skipped, "skipped"))
 
     beta = cfg.extra["f2"]["beta"] if cfg.entry == "f2_r3" else None  # F2Env.step needs it
-    while training_calls() < cfg.budget:
+    while training_calls() < cfg.budget and not final_checkpoint_evaluated:
         ctx, row, ctx_index = next(stream)
         n_episodes += 1
         env.reset(ctx)
         fire_checkpoints()  # an F1 reset costs 1 call and can reach a threshold before any update
         _check_finite(env.obs(), 0.0)
         done, steps, reward = env.done, 0, 0.0
-        while not done and training_calls() < cfg.budget:
+        while not done and training_calls() < cfg.budget and not final_checkpoint_evaluated:
             action = agent.act(env)
             obs, reward, done, info = (env.step(*action, beta) if isinstance(action, tuple)
                                        else env.step(action))
@@ -387,9 +395,14 @@ def run(cfg, agent, kc, outdir):
                  "training_calls": training_calls()})
     fire_checkpoints()  # the run's final call may have reached the last threshold
     assert not thresholds, "training ended with unfired checkpoint thresholds"
+    actual_training_calls = kc.sections - run_start - eval_total - verify_total - repair_total
+    unused_calls = (cfg.budget - actual_training_calls - eval_total - verify_total - repair_total
+                    if cfg.budget_includes_eval else 0)
+    assert unused_calls >= 0, f"run exceeded its total call budget by {-unused_calls} calls"
     summary = {"event": "summary", "entry": cfg.entry, "seed": cfg.seed, "budget": cfg.budget,
-               "training_calls": training_calls(), "eval_calls": eval_total,
+               "training_calls": actual_training_calls, "eval_calls": eval_total,
                "verification_calls": verify_total, "repair_calls": repair_total,
+               "unused_calls": unused_calls,
                "n_episodes": n_episodes, "total_calls": kc.sections - run_start}
     log(summary)
     _write_meta(cfg, outdir, fired, summary, n_episodes)
@@ -421,6 +434,7 @@ def _write_meta(cfg, outdir, fired, summary, n_episodes):
             "training_calls": summary["training_calls"], "eval_calls": summary["eval_calls"],
             "verification_calls": summary["verification_calls"],
             "repair_calls": summary["repair_calls"],
+            "unused_calls": summary["unused_calls"],
             "total_calls": summary["total_calls"], "n_episodes": n_episodes,
             "checkpoints": [{"threshold": th, "training_calls": tc} for th, tc in fired]}
     with open(outdir / "run_meta.json", "w") as f:
