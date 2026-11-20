@@ -1,0 +1,2 @@
+run_rc,selected_f1_config_id,selected_f1_slot,threshold,pilot_seeds,entries_reaching_bar,eval_split_sha256
+True,tune/f1_r1/cfg01,1,0.99,"[0, 1, 2]","{'f0_r1': False, 'f1_r1': False, 'f2_r3': False}",9fbb20b2b11b3907daae9ad5303be85bc88360f109370b99cda95197665c5be6

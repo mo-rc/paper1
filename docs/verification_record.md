@@ -240,3 +240,80 @@ Gate 3 acceptance is complete: the diagnostics are reproducible by the one scrip
 - Open item: A5's evaluation budget is unsatisfiable for F1 as written (an F1 greedy-rollout evaluation of 1,000 V contexts costs about 10,000+ calls against a 3,000-call tuning budget); to be settled by Amendment A7 before P12a. No F1 tuning or pilot config can be frozen until then.
 - Carried to P12a: epsilon-greedy accept probability, PER importance-weight normalisation (batch max), no entropy bonus in F0, reproducibility check in a fresh process.
 - **Approved by Dr Mudasir Hussain (supervisor), recorded by the project lead on his instruction, 2026-11-17.**
+
+## P12a: pilots, tuning and D6 trigger (2026-11-20)
+
+**Protocol.** P12a ran locally on branch `review` under approved Amendment A7 with the full validation split SHA-256 `9fbb20b2b11b3907daae9ad5303be85bc88360f109370b99cda95197665c5be6`. The preflight reproduced 796 feasible contexts among 1,000 V rows and 71 among the first 100. All pilot and tuning evaluations were repair-free. Feasibility percentages below use contexts with at least one feasible catalogue section; gaps are percent mass gaps. F1 steps are mean rollout moves on its 100-row subset. **VERIFIED** — `results/p12a/manifest.json`, run artifacts and saved masks.
+
+**Pilots.** Nine runs completed: each used 10,000 training checker calls; F0/F2 evaluated 1,000 V rows, F1 evaluated the first 100. Evaluation calls are shown separately. Offline repaired metrics use the registered mass-order repair applied to full V masks; no repair ran during evaluation.
+
+| Entry | Seed | Raw feasibility | Raw mean gap | Offline repaired gap | Repaired feasibility | Repair abstentions | Training calls | Evaluation calls | F1 mean steps |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| f0_r1 | 0 | 94.10% | 65.6571% | 62.8877% | 99.25% | 6 | 10000 | 1000 | — |
+| f0_r1 | 1 | 94.10% | 65.6571% | 62.8877% | 99.25% | 6 | 10000 | 1000 | — |
+| f0_r1 | 2 | 94.10% | 65.6571% | 62.8877% | 99.25% | 6 | 10000 | 1000 | — |
+| f1_r1 | 0 | 66.20% | 17.5249% | 12.3397% | 100.00% | 0 | 10000 | 601 | 6.11 |
+| f1_r1 | 1 | 76.06% | 25.8567% | 19.8310% | 100.00% | 0 | 10000 | 575 | 6.28 |
+| f1_r1 | 2 | 76.06% | 22.6046% | 18.1627% | 100.00% | 0 | 10000 | 593 | 5.32 |
+| f2_r3 | 0 | 94.10% | 65.6571% | 62.8877% | 99.25% | 6 | 10000 | 1000 | — |
+| f2_r3 | 1 | 60.43% | 37.2944% | 22.5360% | 100.00% | 0 | 10000 | 1000 | — |
+| f2_r3 | 2 | 94.10% | 65.6571% | 62.8877% | 99.25% | 6 | 10000 | 1000 | — |
+
+**Tuning.** All 36 configurations completed with seed 0, a 3,000-call total budget including evaluation, and no repair. The full configuration fields are preserved in `results/p12a/manifest.json` and `paper/tables/p12a_tune_summary.csv`.
+
+| Entry | Slot | Raw feasibility | Raw mean gap | Repaired feasibility | Offline repaired gap | Training calls | Evaluation calls | Total calls | Unused calls |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| f0_r1 | 1 | 34.05% | 14.8054% | 100.00% | 7.3532% | 2000 | 1000 | 3000 | 0 |
+| f0_r1 | 2 | 94.10% | 65.6571% | 99.25% | 62.8877% | 2000 | 1000 | 3000 | 0 |
+| f0_r1 | 3 | 37.81% | 21.4554% | 100.00% | 10.9485% | 2000 | 1000 | 3000 | 0 |
+| f0_r1 | 4 | 55.28% | 61.2038% | 94.97% | 44.5076% | 2000 | 1000 | 3000 | 0 |
+| f0_r1 | 5 | 52.89% | 56.8260% | 99.50% | 58.8636% | 2000 | 1000 | 3000 | 0 |
+| f0_r1 | 6 | 94.10% | 65.6571% | 99.25% | 62.8877% | 2000 | 1000 | 3000 | 0 |
+| f0_r1 | 7 | 56.41% | 48.9892% | 100.00% | 44.8749% | 2000 | 1000 | 3000 | 0 |
+| f0_r1 | 8 | 33.04% | 15.0797% | 100.00% | 7.2951% | 2000 | 1000 | 3000 | 0 |
+| f0_r1 | 9 | 11.93% | 17.0959% | 100.00% | 2.4023% | 2000 | 1000 | 3000 | 0 |
+| f0_r1 | 10 | 94.10% | 65.6571% | 99.25% | 62.8877% | 2000 | 1000 | 3000 | 0 |
+| f0_r1 | 11 | 94.10% | 65.6571% | 99.25% | 62.8877% | 2000 | 1000 | 3000 | 0 |
+| f0_r1 | 12 | 53.39% | 66.3096% | 74.62% | 59.4448% | 2000 | 1000 | 3000 | 0 |
+| f1_r1 | 1 | 61.97% | 32.6167% | 100.00% | 21.0467% | 1600 | 403 | 2003 | 997 |
+| f1_r1 | 2 | 50.70% | 40.2620% | 92.96% | 28.7145% | 1600 | 970 | 2570 | 430 |
+| f1_r1 | 3 | 42.25% | 41.3655% | 91.55% | 30.4618% | 1600 | 855 | 2455 | 545 |
+| f1_r1 | 4 | 49.30% | 28.1371% | 94.37% | 18.9536% | 1600 | 1072 | 2672 | 328 |
+| f1_r1 | 5 | 40.85% | 50.1818% | 98.59% | 37.1569% | 1600 | 869 | 2469 | 531 |
+| f1_r1 | 6 | 61.97% | 36.2626% | 98.59% | 28.3895% | 1600 | 749 | 2349 | 651 |
+| f1_r1 | 7 | 38.03% | 43.5963% | 92.96% | 33.9719% | 1600 | 629 | 2229 | 771 |
+| f1_r1 | 8 | 53.52% | 38.9236% | 94.37% | 35.4578% | 1600 | 1104 | 2704 | 296 |
+| f1_r1 | 9 | 63.38% | 40.9416% | 97.18% | 30.1344% | 1600 | 1106 | 2706 | 294 |
+| f1_r1 | 10 | 45.07% | 32.0613% | 77.46% | 35.0516% | 1600 | 967 | 2567 | 433 |
+| f1_r1 | 11 | 43.66% | 23.3576% | 100.00% | 11.8981% | 1600 | 655 | 2255 | 745 |
+| f1_r1 | 12 | 57.75% | 30.2918% | 95.77% | 20.0136% | 1600 | 624 | 2224 | 776 |
+| f2_r3 | 1 | 0.00% | — | 100.00% | 0.0000% | 2000 | 1000 | 3000 | 0 |
+| f2_r3 | 2 | 32.54% | 13.2010% | 100.00% | 4.2953% | 2000 | 1000 | 3000 | 0 |
+| f2_r3 | 3 | 0.00% | — | 100.00% | 0.0000% | 2000 | 1000 | 3000 | 0 |
+| f2_r3 | 4 | 58.54% | 47.7122% | 100.00% | 43.6159% | 2000 | 1000 | 3000 | 0 |
+| f2_r3 | 5 | 94.10% | 65.6571% | 99.25% | 62.8877% | 2000 | 1000 | 3000 | 0 |
+| f2_r3 | 6 | 17.96% | 11.8090% | 100.00% | 2.1215% | 2000 | 1000 | 3000 | 0 |
+| f2_r3 | 7 | 58.54% | 47.7122% | 100.00% | 43.6159% | 2000 | 1000 | 3000 | 0 |
+| f2_r3 | 8 | 60.43% | 37.2944% | 100.00% | 22.5360% | 2000 | 1000 | 3000 | 0 |
+| f2_r3 | 9 | 17.96% | 11.8090% | 100.00% | 2.1215% | 2000 | 1000 | 3000 | 0 |
+| f2_r3 | 10 | 58.54% | 47.7122% | 100.00% | 43.6159% | 2000 | 1000 | 3000 | 0 |
+| f2_r3 | 11 | 0.00% | — | 100.00% | 0.0000% | 2000 | 1000 | 3000 | 0 |
+| f2_r3 | 12 | 58.54% | 47.7122% | 100.00% | 43.6159% | 2000 | 1000 | 3000 | 0 |
+
+Tuning used 101,203 checker calls and recorded 6,797 unused calls across all configurations. F1 unused calls reflect termination after the final checkpoint evaluation.
+
+**D5 selections.** No non-default configuration met the A7 rule, so each provisional default (slot 1) remained selected.
+
+| Entry | Selected slot | Selected configuration | D5 result | Raw feasibility | Offline repaired gap | Total calls | Unused calls |
+|---|---:|---|---|---:|---:|---:|---:|
+| f0_r1 | 1 | hidden [64,64], lr 0.001, batch 64, normalize advantage false | no candidate met A7 D5; incumbent retained | 34.05% | 7.3532% | 3000 | 0 |
+| f1_r1 | 1 | hidden [64,64], lr 0.001, epsilon 0.1, n 5, target sync 100, replay 10000, alpha 0.6, batch 32, beta anneal 3000 | no candidate met A7 D5; incumbent retained | 61.97% | 21.0467% | 2003 | 997 |
+| f2_r3 | 1 | hidden [64,64], lr 0.001, logZ lr 0.001, batch 64, beta 50 | no candidate met A7 D5; incumbent retained | 0.00% | 0.0000% | 3000 | 0 |
+
+F2-R3 slot 1 outputs section index 0 for all 1,000 V contexts. Its raw feasibility is 0% on the 796 contexts with feasible sections. Offline repair reaches the optimum on all 796, giving 100% repaired feasibility, zero abstentions on that denominator and a 0% repaired gap. The 204 contexts with no feasible section are excluded from the metric denominators. **VERIFIED** — slot 1 evaluation CSV and full V masks.
+
+**D6 trigger.** None of F0-R1, F1-R1 or F2-R3 reached raw feasibility ≥ 0.99 in all three pilot seeds. The A7 decision is `run_rc=true`, selecting F1-R1 slot 1 (`tune/f1_r1/cfg01`) if R-C is authorized. This records the trigger decision only; no R-C run was performed. **VERIFIED** — all nine pilot CSVs, `results/p12a/trigger.json` and `paper/tables/p12a_trigger.csv`.
+
+**Artifact checks.** The generated tables match the saved manifest: 9 pilot rows, 36 tuning rows and one trigger row; each metric, configuration and D5 selected flag was compared. The full pilot logs, checkpoints, metadata, evaluation CSVs, tuning artifacts and validation mask cache are under `results/p12a/`. **VERIFIED** — CSV/manifest comparison and artifact seals.
+
+**Pilot provenance note.** Pilot `run_meta.json` files record HEAD `8eeeb40f09d40ee629d05354c5b4613914e3211f`. The runs used the working-tree correction `c["m"]` in `src/ub_rl/experiment_runner.py`, which was then committed as `c4f1c58d8a503f1ca027dd9ecd3a90b2a9e2aa6f`. The harness metadata records Git HEAD but not the dirty working-tree state or the P12a driver source hash; the pilot commit field therefore does not identify the full source state used. Pilot artifact seals, configuration and data hashes, harness/agent/replay hashes, logs and recomputed metrics were checked; this provenance limitation is retained here. **VERIFIED** — pilot metadata/artifacts and Git history.
