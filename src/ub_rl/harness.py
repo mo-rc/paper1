@@ -430,6 +430,7 @@ def _write_meta(cfg, outdir, fired, summary, n_episodes):
                 ROOT / "data" / "raw" / "UB-secpropsdimsprops-EC3UKNA-UK-10-16-2026.xlsx"),
             "config_sha256": _sha256_text(json.dumps(cfg_dict, sort_keys=True)),
             "budget": cfg.budget, "budget_includes_eval": cfg.budget_includes_eval,
+            "eval_repair": cfg.eval_repair,
             "eval_contexts": cfg_dict["eval_contexts"],
             "training_calls": summary["training_calls"], "eval_calls": summary["eval_calls"],
             "verification_calls": summary["verification_calls"],
@@ -437,6 +438,10 @@ def _write_meta(cfg, outdir, fired, summary, n_episodes):
             "unused_calls": summary["unused_calls"],
             "total_calls": summary["total_calls"], "n_episodes": n_episodes,
             "checkpoints": [{"threshold": th, "training_calls": tc} for th, tc in fired]}
+    if isinstance(cfg.eval_contexts, str) and cfg.eval_contexts.startswith("val"):
+        val_file = ROOT / "data" / "splits" / "val.csv"
+        meta["eval_split_file"] = "data/splits/val.csv"
+        meta["eval_split_sha256"] = sha256_file(val_file)
     with open(outdir / "run_meta.json", "w") as f:
         json.dump(meta, f, indent=2, sort_keys=True)
 
@@ -460,9 +465,13 @@ def main(argv=None):
         sys.exit("eval_contexts is not set in this config; pass --allow-no-eval to run without "
                  "checkpoint evaluation (toy/debug runs only)")
     try:
-        from . import agents  # noqa: F401  - registers the three entries (P11 steps 3-5)
+        from . import agents  # imports the canonical harness module and registers the entries
     except ImportError:
         sys.exit("src/ub_rl/agents.py is not implemented yet (P11 steps 3-5)")
+    # Under ``python -m ub_rl.harness``, agents.py imports ``ub_rl.harness`` by package name while
+    # this entry point is running as ``__main__``. Copy its registrations into this CLI module.
+    if hasattr(agents, "harness"):
+        AGENTS.update(agents.harness.AGENTS)
     if cfg.entry not in AGENTS:
         sys.exit(f"no agent registered for entry {cfg.entry!r}")
     from .catalogue import parse_workbook

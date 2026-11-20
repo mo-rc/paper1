@@ -179,7 +179,11 @@ class NStepBuilder:
         if len(self.window) >= self.n:
             out = self.window.pop(0)
             c = self.cum.pop(0)
-            yield (out[0], out[1], c, self.window[-1][3], self.window[-1][4])
+            if self.window:
+                next_obs, terminal = self.window[-1][3], self.window[-1][4]
+            else:  # n=1: the full window was just consumed
+                next_obs, terminal = np.asarray(s_next, dtype=np.float32), bool(done)
+            yield (out[0], out[1], c, next_obs, terminal)
         if done:  # the terminal flush: every remaining partial window, no bootstrap
             while self.window:
                 out = self.window.pop(0)

@@ -38,6 +38,16 @@ def test_nstep_gamma09():
     assert not out[0][4] and out[0][3][0] == 3.5
 
 
+def test_nstep_one_returns_single_transition_with_correct_next_state():
+    b = NStepBuilder(n=1, gamma=0.9)
+    out = list(b.push(_tr(1, 2.0)))
+    assert len(out) == 1 and out[0][2] == pytest.approx(2.0)
+    assert not out[0][4] and out[0][3][0] == 1.5
+    terminal = list(b.push(_tr(2, 3.0, done=True)))
+    assert len(terminal) == 1 and terminal[0][2] == pytest.approx(3.0)
+    assert terminal[0][4] and terminal[0][3][0] == 2.5
+
+
 def test_nstep_terminal_flush_of_a_window_shorter_than_n():
     """A window shorter than n: two transitions, the second terminal - both flush with no
     bootstrap, G = r0 + gamma r1 for the first and r1 for the second."""
