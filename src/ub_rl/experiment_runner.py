@@ -850,7 +850,7 @@ def run_bench(smoke: bool = False) -> dict:
         env["PYTHONPATH"] = str(ROOT / "src") + (os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else "")
         for key in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "NUMEXPR_NUM_THREADS"):
             env[key] = "1"
-        cmd = [sys.executable, "-m", "ub_rl.p12a", "_bench-worker", entry,
+        cmd = [sys.executable, "-m", "ub_rl.experiment_runner", "_bench-worker", entry,
                "--outdir", str(outdir), "--smoke" if smoke else "--full"]
         proc = subprocess.run(cmd, cwd=ROOT, env=env, capture_output=True, text=True)
         if proc.returncode:

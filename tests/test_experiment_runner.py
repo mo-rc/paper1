@@ -7,7 +7,7 @@ import sys
 import numpy as np
 import pytest
 
-from ub_rl import p12a
+from ub_rl import experiment_runner as p12a
 from ub_rl.checker import Checker
 from ub_rl.harness import RunConfig, ROOT
 
