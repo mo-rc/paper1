@@ -329,3 +329,5 @@ F2-R3 slot 1 outputs section index 0 for all 1,000 V contexts. Its raw feasibili
 **READ** — Commit `2c5969c` changes P11 code after P11 acceptance through the `replay.py` `NStepBuilder` fix; it affects only `n=1` configurations, not the defaults. The full test suite must be rerun locally. — `src/ub_rl/replay.py`, Git history for `2c5969c`.
 
 **VERIFIED** — The existing pilot provenance note remains immediately above this post-hoc section: pilot metadata recorded HEAD `8eeeb40` although runs used the uncommitted `c["m"]` correction later committed as `c4f1c58`. — `docs/verification_record.md`, `results/p12a/pilot/` metadata.
+
+Full-suite result (local, rl_env, 2026-11-22, after P12a): 315 passed, 1 skipped, 1 xfailed in 1992.71 s (0:33:12). READ — project lead's terminal output. The P11 result was 284 passed, 1 skipped, 1 xfailed.
