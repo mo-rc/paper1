@@ -1,6 +1,6 @@
 # Amendment A7 (2026-11-17, before any RL run): tuning and pilot evaluation — budgets, sets and raw metrics
 
-Draft text, proposed for recording in `docs/spec.md`. Status: **proposed** (plan only: no code, no runs, nothing committed, spec.md not edited). On approval it is recorded in the A5/A6 form — date, "before any RL run", the superseded sentences kept visible in place. A7 does not change the checker, the physics, the objective, the splits or their hashes, or the success criteria. Companion plan: `docs/p12a_plan.md`.
+Status: approved and recorded as Amendment A7 in docs/spec.md (2026-11-18). This file is the source draft, kept for the record; the spec text governs. The (2026-11-17) in the title is the draft date.
 
 ## 1. The problem
 
