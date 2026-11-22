@@ -1,5 +1,7 @@
 # P12b pre-registration freeze — plan only
 
+Status: planned; the freeze and tag wait for the Stage 2 audit (P14 to P16), per docs/spec.md line 391.
+
 No analysis implementation, test run, test-set evaluation, or Stage 1 training is authorized by this plan. The approved spec governs. **READ** — `docs/spec.md:178`.
 
 ## Analysis pipeline
@@ -15,6 +17,7 @@ No analysis implementation, test run, test-set evaluation, or Stage 1 training i
 
 - R-C keeps environment reward R1 and adds `lambda * c`, where `c=max(0, max utilisation - 1)` for the accepted design; dual ascent is `lambda <- max(0, lambda + eta * (mean c - 0))`. Freeze exactly: initial multiplier `lambda_init`; learning rate `eta`; update schedule (cadence and observations included in `mean c`); seed set; checker-call budget and checkpoint schedule. **READ** — `docs/spec.md:246,128,367`.
 - A5 says R-C runs on the best F1 entry only if its pilot trigger fires, and otherwise is not run. R2 and R-D are not run unless reinstated by a later dated amendment. **READ** — `docs/spec.md:367,385`.
+- Implementation needed before any R-C run: R-C is not implemented (no lambda/dual code in `src/ub_rl/agents.py`, `harness.py`, `envs.py`). P13 needs an F1 R-C agent variant plus tests (lambda update, lambda >= 0, penalty subtracted from the terminal n-step return in the TD target, stored env reward stays R1, feasibility judged on verified output) and a record entry before any R-C run. Lambda is monotone non-decreasing by construction (target mean c = 0, c >= 0); the amendment states this.
 - There is no R-C pilot or V-tuning: A5 registers a pilot trigger and, if it fires, an R-C run on the best F1 entry; it registers neither a separate R-C pilot nor R-C V-tuning. Adding an R-C pilot requires its own dated spec amendment. **READ** — `docs/spec.md:367,385`; `docs/verification_record.md:315`.
 - **Proposed a priori constants for the P12b amendment, not yet approved:** `lambda_init = 1.0`; `eta = 0.01`; update once per 100 completed episodes, using mean `c` from those 100 accepted designs. The R1 infeasible-return penalty is 1 log-reward unit and worst-case step cost is 0.013; initializing lambda at 1.0 makes a unit utilization overage comparable to the infeasible penalty, while eta 0.01 limits each block update to 1% of mean overage. This choice uses the R1 scale and no validation result. **READ** — `src/ub_rl/envs.py:55-65`; `src/ub_rl/reward_checks.py:5-15,32-35`; `docs/spec.md:246`.
 - Freeze the seed set as 0–9 and the R-C run budget as 200,000 checker calls per seed, with checkpoints at 10,000, 50,000 and 200,000; run the triggered R-C variant on the A7-selected best F1 entry. **READ** — `docs/spec.md:128,367,385`; `docs/verification_record.md:315`.
