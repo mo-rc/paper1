@@ -1,0 +1,7 @@
+run_id,entry,seed,state,n_validation_contexts,logit_std_across_V_mean_over_actions,logit_std_across_V_min_action,logit_std_across_V_max_action,mean_entropy_nats,greedy_mode_index,observed_eval_mode_index,greedy_mode_matches_observed,zero_variance_observation_features
+pilot/f0_r1/seed0,f0_r1,0,fresh_same_seed,1000,0.026155227795243263,0.0074742697179317474,0.04778197035193443,4.50400447845459,52,69,False,none
+pilot/f0_r1/seed0,f0_r1,0,trained_checkpoint,1000,0.14060047268867493,0.014562285505235195,0.9295006990432739,0.035617660731077194,69,69,True,none
+pilot/f2_r3/seed0,f2_r3,0,fresh_same_seed,1000,0.03517935425043106,0.011897760443389416,0.07952353358268738,4.2834391593933105,0,69,False,none
+pilot/f2_r3/seed0,f2_r3,0,trained_checkpoint,1000,2.7323968410491943,0.0004233584040775895,3.854762315750122,0.004167377483099699,69,69,True,none
+pilot/f2_r3/seed1,f2_r3,1,fresh_same_seed,1000,0.03952905535697937,0.009390181861817837,0.09043809026479721,4.271814823150635,4,58,False,none
+pilot/f2_r3/seed1,f2_r3,1,trained_checkpoint,1000,2.2809336185455322,0.004368488676846027,3.9105606079101562,0.05157044157385826,58,58,True,none
