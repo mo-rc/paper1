@@ -20,6 +20,16 @@ Status: **PLAN ONLY.** A4 is **DRAFT** until recorded as a dated amendment in `d
 
 P14a is built in two parts: P14a-1 (no steel density needed: grid, section properties, resistances, classification, depth_ok, guards, cache) and P14a-2 (after the density is recorded: mass, self-weight, demand, bending and deflection utilisations); shear resistance is P14b.
 
+## P14a-2 specification
+
+- **PROVISIONAL project convention:** `rho = 7850 kg/m³`, sourced to `docs/engineering_concepts.md:95` and recorded provisionally in `docs/verification_record.md`. The authoritative standard, edition and clause remain unconfirmed. **READ** — `docs/engineering_concepts.md:95`; `docs/verification_record.md`.
+- Given a recorded density `rho` in kg/m³, convert section area `A` in mm² as `mass_per_m = A * rho / 1,000,000` kg/m; the factor converts mm² to m². **ASSUMPTION** — dimensional conversion; **READ** — area formula `docs/a4_proposal.md:18`; mass objective `docs/spec.md:48`.
+- Use `g = mass_per_m * 9.80665 / 1000` kN/m and `w_Ed = w_superimposed + 1.35*g`; ULS bending demand is `M_Ed = w_Ed*L²/8` kN·m. **READ** — `docs/spec.md:30-37`; `src/ub_rl/checker.py:146-160`.
+- Deflection rules: `var360` and `var200` use variable load `Q_k` only, so do not depend on self-weight; `tot250` uses total characteristic `G_k + g + Q_k`, so it depends on self-weight. Preserve each rule's registered limit and calculate deflection using the applicable load and `I_y`. **READ** — `docs/spec.md:73-76,199`; `src/ub_rl/context.py:13-18`; `src/ub_rl/checker.py:164-171,299-306`.
+- API: replace unavailable `u_bending` and `u_deflection` with computed utilisations; add mass-per-metre and P14a-2 self-weight/load/demand/deflection values. Shear, shear buckling, bending-shear interaction, web bearing and LTB fields stay unavailable for P14b. Keep `complete=False` and `feasible=None` until P14b. **READ** — `src/ub_rl/welded_checker.py:41-54,96-113`; `docs/p14_plan.md:8,19`.
+- Tests: include a hand-calculated area-to-mass, self-weight and bending-demand case using only the density recorded in the verification record; test one case for each of `var360`, `var200`, and `tot250`, including that only `tot250` changes when self-weight is included. **ASSUMPTION** — focused test design; **READ** — `docs/spec.md:36-37,73-74`; `src/ub_rl/checker.py:152-169`; `src/ub_rl/context.py:13-18`.
+- The provisional entry exists in the verification record; the clause must be confirmed before P15 and before any Stage 2 claim, and any required dated A4 amendment/authorization must be made. Once those gates are satisfied, the smallest separately reviewable authorization is P14a-2 mass, self-weight, ULS bending demand and three deflection rules only; P14b remains gated. **ASSUMPTION** — proposed authorization boundary; **READ** — `docs/a4_proposal.md:3,20,65-66`; `docs/p14_plan.md:3,8`.
+
 ## New-module API and units
 
 - **ASSUMPTION:** add `src/ub_rl/welded_sections.py` and, if useful, `src/ub_rl/welded_checker.py`; no existing source module is changed.
