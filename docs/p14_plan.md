@@ -10,13 +10,15 @@ Status: **PLAN ONLY.** A4 is **DRAFT** until recorded as a dated amendment in `d
 
 ## P14a Step 1 specification
 
-- Grid: integer dimensions in millimetres, using A4 bounds/increments and predicates `h>2tf`, `b>tw`, and `10*h < 31*b`; count is 710,325. **READ** — `docs/a4_proposal.md:10,23`; `docs/spec.md:256`.
+- Grid: integer dimensions in millimetres, using A4 bounds/increments and predicates `h>=b`, `h>2tf`, `b>tw`, and `10*h < 31*b`; count is 710,325. **READ** — `docs/a4_proposal.md:10,23`; `docs/spec.md:256`.
 - Yield strength: use the maximum of `tf` and `tw`, with the thickness bands in the spec. **READ** — `docs/spec.md:53-54,79-80`.
 - Classification: classify flange outstand and web; a design is Class 4 if either requires it, and P14a rejects Class 4. **READ** — `docs/spec.md:64,78-80`; `docs/a4_proposal.md:19`.
 - Compute section properties using the A4 equations; do not duplicate those equations here. **READ** — `docs/a4_proposal.md:18`.
 - Welded-section mass per metre is section area multiplied by a steel density whose value and source are recorded. Do not choose a density until its value and authoritative source are recorded in `docs/verification_record.md`. Then include self-weight in ULS demand: `g = mass_per_m × 9.80665 / 1000 kN/m`; `w_Ed = w_superimposed + 1.35 × g`. **READ** — `docs/spec.md:30-37,48`; `src/ub_rl/checker.py:84-88,152-155`; **ASSUMPTION** — mass from area times density pending source/value record.
 - Bending: check demand against applicable section resistance for supported classes; deflection: compare the specified calculated deflection with the configured limit. P14a reports these partial outcomes only. **READ** — `docs/spec.md:65,73-74,79`; `docs/a4_proposal.md:21`.
 - Status contract: each partial result has `complete=False`, `feasible=None`, and a `passes_p14a_checks` mapping of P14a check names to outcomes. Include `depth_ok = (depth_cap is None or h <= depth_cap)` as a separate partial outcome; it is context-specific depth compliance, not section-geometry validity. Neither `depth_ok` nor self-weight may cause P14a to report full structural feasibility. P14b fields remain unavailable, never treated as passes. `lightest_feasible_context()` and every feasibility-search API raise `NotImplementedError` until P14b is complete. Grid enumeration to count 710,325 is permitted but is not a per-context feasibility result. **ASSUMPTION** — explicit status/API guard prevents partial checks being mistaken for full verification. **READ** — `src/ub_rl/checker.py:146,265,299-317`; `src/ub_rl/context.py:21-29,45-48`.
+
+P14a is built in two parts: P14a-1 (no steel density needed: grid, section properties, resistances, classification, depth_ok, guards, cache) and P14a-2 (after the density is recorded: mass, self-weight, demand, bending and deflection utilisations); shear resistance is P14b.
 
 ## New-module API and units
 
