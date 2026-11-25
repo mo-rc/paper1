@@ -4,7 +4,8 @@ from time import perf_counter
 
 import numpy as np
 
-from .config import CheckerConfig
+from .config import CheckerConfig, E_STEEL, G_ACC
+from .context import DEFLECTION_RULES
 from .welded_sections import coerce_design, geometry_valid, section_properties
 
 
@@ -42,16 +43,45 @@ class WeldedChecker:
             "design": parsed,
             "complete": False,
             "feasible": None,
-            "passes_p14a_checks": {"geometry_valid": False, "class_ok": None, "depth_ok": depth_ok},
             "geometry_valid": False,
             "class_ok": None,
             "depth_ok": depth_ok,
             "section_properties": None,
+            "mass_per_m_kg_m": None,
+            "self_weight_kN_m": None,
+            "w_Ed_kN_m": None,
+            "M_Ed_kNm": None,
             "Mc_Rd_Nmm": None,
-            "u_bending": "unavailable: steel density not yet recorded",
-            "u_deflection": "unavailable: steel density not yet recorded",
+            "u_bending": None,
+            "deflection_mm": None,
+            "deflection_limit_mm": None,
+            "u_deflection": None,
+            "passes_p14a_checks": {"geometry_valid": False, "class_ok": None,
+                                    "depth_ok": depth_ok, "bending_ok": None,
+                                    "deflection_ok": None},
             "p14b_fields": "unavailable",
         }
+
+    def _p14a2_values(self, ctx, props):
+        cfg = self.config
+        w, phi = ctx.factored_udl(cfg.gamma_G, cfg.gamma_Q)
+        g = (props.mass_per_m * G_ACC / 1000.0
+             if cfg.self_weight else 0.0)
+        w_ed = w + cfg.gamma_G * g
+        m_ed = w_ed * ctx.span ** 2 / 8.0
+        u_bending = m_ed / (props.mc_rd / 1e6)
+
+        mode, ratio = DEFLECTION_RULES[ctx.deflection_rule]
+        q_k = phi * w / cfg.gamma_Q
+        q = (q_k if mode == "variable"
+             else q_k + (1.0 - phi) * w / cfg.gamma_G + g)
+        span_mm = ctx.span * 1000.0
+        delta = 5.0 * q * span_mm ** 4 / (384.0 * E_STEEL * props.iy)
+        limit = span_mm / ratio
+        return {"mass_per_m_kg_m": props.mass_per_m, "self_weight_kN_m": g,
+                "w_Ed_kN_m": w_ed, "M_Ed_kNm": m_ed,
+                "u_bending": u_bending, "deflection_mm": delta,
+                "deflection_limit_mm": limit, "u_deflection": delta / limit}
 
     def check(self, ctx, design):
         """Return one partial-result dict; never assert full structural feasibility."""
@@ -93,6 +123,12 @@ class WeldedChecker:
                 props = section_properties(d, self.config)
                 depth_ok = self._depth_ok(ctx, d)
                 class_ok = props.section_class <= 3
+                values = self._p14a2_values(ctx, props) if class_ok else {
+                    "mass_per_m_kg_m": None, "self_weight_kN_m": None,
+                    "w_Ed_kN_m": None, "M_Ed_kNm": None, "u_bending": None,
+                    "deflection_mm": None, "deflection_limit_mm": None,
+                    "u_deflection": None,
+                }
                 row = {
                     "design": d,
                     "complete": False,
@@ -101,14 +137,17 @@ class WeldedChecker:
                         "geometry_valid": True,
                         "class_ok": class_ok,
                         "depth_ok": depth_ok,
+                        "bending_ok": (values["u_bending"] <= 1.0 + self.config.tol
+                                       if class_ok else None),
+                        "deflection_ok": (values["u_deflection"] <= 1.0 + self.config.tol
+                                          if class_ok else None),
                     },
                     "geometry_valid": True,
                     "class_ok": class_ok,
                     "depth_ok": depth_ok,
                     "section_properties": props,
                     "Mc_Rd_Nmm": props.mc_rd if class_ok else None,
-                    "u_bending": "unavailable: steel density not yet recorded",
-                    "u_deflection": "unavailable: steel density not yet recorded",
+                    **values,
                     "p14b_fields": "unavailable",
                 }
             self._cache[key] = deepcopy(row)
@@ -123,7 +162,8 @@ class WeldedChecker:
                 "complete": np.asarray([], dtype=bool),
                 "feasible": np.asarray([], dtype=object),
                 "passes_p14a_checks": {k: np.asarray([], dtype=object)
-                                        for k in ("geometry_valid", "class_ok", "depth_ok")},
+                                        for k in ("geometry_valid", "class_ok", "depth_ok",
+                                                  "bending_ok", "deflection_ok")},
             }
         result = {}
         keys = rows[0].keys()

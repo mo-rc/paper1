@@ -11,6 +11,9 @@ import numpy as np
 
 from .config import CheckerConfig
 
+# PROVISIONAL convention; see docs/verification_record.md, "Steel density convention (PROVISIONAL)".
+STEEL_DENSITY_KG_M3 = 7850.0
+
 
 # Bounds and increments: docs/a4_proposal.md:10.
 H_VALUES = range(300, 901, 10)
@@ -35,6 +38,7 @@ class Design(NamedTuple):
 class SectionProperties:
     design: Design
     area: int  # mm2
+    mass_per_m: float  # kg/m, using the provisional density convention
     hw: int  # mm, clear web depth
     iy: float  # mm4, strong axis
     iz: float  # mm4, weak axis
@@ -126,6 +130,7 @@ def section_properties(design, config=None):
     h, b, tw, tf = d
     hw = h - 2 * tf
     area = 2 * b * tf + hw * tw
+    mass_per_m = area * STEEL_DENSITY_KG_M3 / 1e6
     iy = 2 * (b * tf ** 3 / 12.0 + b * tf * ((h - tf) / 2.0) ** 2) + tw * hw ** 3 / 12.0
     iz = 2 * tf * b ** 3 / 12.0 + hw * tw ** 3 / 12.0
     wel_y = iy / (h / 2.0)
@@ -140,5 +145,5 @@ def section_properties(design, config=None):
     flange_class, web_class, section_class = classify_section(flange_ratio, web_ratio, epsilon)
 
     mc_rd = (wpl_y if section_class <= 2 else wel_y) * fy / cfg.gamma_M0
-    return SectionProperties(d, area, hw, iy, iz, wel_y, wpl_y, fy, epsilon,
+    return SectionProperties(d, area, mass_per_m, hw, iy, iz, wel_y, wpl_y, fy, epsilon,
                              flange_class, web_class, section_class, mc_rd)
