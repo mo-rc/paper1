@@ -1,5 +1,6 @@
 """P14a partial checker; deliberately does not declare full feasibility."""
 from copy import deepcopy
+from math import sqrt
 from time import perf_counter
 
 import numpy as np
@@ -52,13 +53,14 @@ class WeldedChecker:
             "w_Ed_kN_m": None,
             "M_Ed_kNm": None,
             "Mc_Rd_Nmm": None,
+            "Av_mm2": None, "V_pl_Rd_N": None, "V_Ed_N": None, "u_shear": None,
             "u_bending": None,
             "deflection_mm": None,
             "deflection_limit_mm": None,
             "u_deflection": None,
             "passes_p14a_checks": {"geometry_valid": False, "class_ok": None,
                                     "depth_ok": depth_ok, "bending_ok": None,
-                                    "deflection_ok": None},
+                                    "deflection_ok": None, "shear_ok": None},
             "p14b_fields": "unavailable",
         }
 
@@ -70,6 +72,10 @@ class WeldedChecker:
         w_ed = w + cfg.gamma_G * g
         m_ed = w_ed * ctx.span ** 2 / 8.0
         u_bending = m_ed / (props.mc_rd / 1e6)
+        av = cfg.shear_eta * props.hw * props.design.tw
+        v_pl_rd = av * props.fy / (sqrt(3.0) * cfg.gamma_M0)
+        v_ed = w_ed * ctx.span / 2.0 * 1000.0
+        u_shear = v_ed / v_pl_rd
 
         mode, ratio = DEFLECTION_RULES[ctx.deflection_rule]
         q_k = phi * w / cfg.gamma_Q
@@ -80,7 +86,8 @@ class WeldedChecker:
         limit = span_mm / ratio
         return {"mass_per_m_kg_m": props.mass_per_m, "self_weight_kN_m": g,
                 "w_Ed_kN_m": w_ed, "M_Ed_kNm": m_ed,
-                "u_bending": u_bending, "deflection_mm": delta,
+                "u_bending": u_bending, "Av_mm2": av, "V_pl_Rd_N": v_pl_rd,
+                "V_Ed_N": v_ed, "u_shear": u_shear, "deflection_mm": delta,
                 "deflection_limit_mm": limit, "u_deflection": delta / limit}
 
     def check(self, ctx, design):
@@ -128,6 +135,7 @@ class WeldedChecker:
                     "w_Ed_kN_m": None, "M_Ed_kNm": None, "u_bending": None,
                     "deflection_mm": None, "deflection_limit_mm": None,
                     "u_deflection": None,
+                    "Av_mm2": None, "V_pl_Rd_N": None, "V_Ed_N": None, "u_shear": None,
                 }
                 row = {
                     "design": d,
@@ -141,6 +149,8 @@ class WeldedChecker:
                                        if class_ok else None),
                         "deflection_ok": (values["u_deflection"] <= 1.0 + self.config.tol
                                           if class_ok else None),
+                        "shear_ok": (values["u_shear"] <= 1.0 + self.config.tol
+                                     if class_ok else None),
                     },
                     "geometry_valid": True,
                     "class_ok": class_ok,
@@ -161,9 +171,27 @@ class WeldedChecker:
                 "design": np.asarray([], dtype=object),
                 "complete": np.asarray([], dtype=bool),
                 "feasible": np.asarray([], dtype=object),
+                "geometry_valid": np.asarray([], dtype=object),
+                "class_ok": np.asarray([], dtype=object),
+                "depth_ok": np.asarray([], dtype=object),
+                "section_properties": np.asarray([], dtype=object),
+                "mass_per_m_kg_m": np.asarray([], dtype=object),
+                "self_weight_kN_m": np.asarray([], dtype=object),
+                "w_Ed_kN_m": np.asarray([], dtype=object),
+                "M_Ed_kNm": np.asarray([], dtype=object),
+                "Mc_Rd_Nmm": np.asarray([], dtype=object),
+                "Av_mm2": np.asarray([], dtype=object),
+                "V_pl_Rd_N": np.asarray([], dtype=object),
+                "V_Ed_N": np.asarray([], dtype=object),
+                "u_shear": np.asarray([], dtype=object),
+                "u_bending": np.asarray([], dtype=object),
+                "deflection_mm": np.asarray([], dtype=object),
+                "deflection_limit_mm": np.asarray([], dtype=object),
+                "u_deflection": np.asarray([], dtype=object),
+                "p14b_fields": np.asarray([], dtype=object),
                 "passes_p14a_checks": {k: np.asarray([], dtype=object)
                                         for k in ("geometry_valid", "class_ok", "depth_ok",
-                                                  "bending_ok", "deflection_ok")},
+                                                  "bending_ok", "deflection_ok", "shear_ok")},
             }
         result = {}
         keys = rows[0].keys()

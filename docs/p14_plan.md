@@ -42,6 +42,8 @@ P14b-1 is limited to plastic shear resistance: candidate welded web area `A_v = 
 
 Inputs retain P14a `h_w,t_w,f_y`, context `L,w`, the existing factored self-weight-adjusted UDL, and only controlled `gamma_M0` and `eta` values. Preserve the existing demand convention. Keep interaction outputs unavailable. **READ** — `docs/spec.md:30-37`; shared partial-result contract above.
 
+P14b-1 implementation authorised by the project lead on the desk-audit basis, under authority delegated by the supervisor, Dr Mudasir Hussain; controlled-text confirmation required before P15 and any Stage 2 claim. P14b-2, -3, -4 remain gated.
+
 ### P14b-2 — shear buckling and bending-shear interaction
 
 - **Equations / source gate:** use the applicable BS EN 1993-1-5:2006 §5 route only after transcribing the correct unstiffened/stiffened-web trigger and resistance equations from controlled §§5.1–5.5. The audit reports the unstiffened trigger `h_w/t_w > 72 epsilon/eta`; it is not authority to select the resistance curve or support model. Following shear-buckling assessment, calculate bending-shear interaction station-wise and explicitly select the applicable route between BS EN 1993-1-1:2005+A1:2014 §6.2.8 and applicable BS EN 1993-1-5:2006 §7 provisions. Record route conditions, equations and thresholds from controlled text before implementation. If a required shear-buckling result is unavailable, interaction remains unavailable; do not interpret that state as buckling not governing. **READ** — `docs/verification_record.md`, shear-buckling row; `docs/spec.md:6`.

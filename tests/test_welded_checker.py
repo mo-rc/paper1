@@ -21,6 +21,7 @@ def test_partial_status_resistances_and_computed_utilisations():
         "geometry_valid": True, "class_ok": True, "depth_ok": True,
         "bending_ok": result["u_bending"] <= 1.0 + checker.config.tol,
         "deflection_ok": result["u_deflection"] <= 1.0 + checker.config.tol,
+        "shear_ok": result["u_shear"] <= 1.0 + checker.config.tol,
     }
     assert result["Mc_Rd_Nmm"] > 0
     assert result["mass_per_m_kg_m"] == pytest.approx(((2 * 200 * 10 + 590 * 10) * 7850) / 1e6)
@@ -90,6 +91,51 @@ def test_hand_calculated_mass_self_weight_and_bending_case():
     assert result["u_bending"] == pytest.approx(expected_u)
 
 
+def test_p14b1_hand_calculated_plastic_shear():
+    # Independent hand arithmetic: Av=1*580*10=5,800 mm2;
+    # wEd=57.785974539075 kN/m; Vpl=Av*355/(sqrt(3)*1)=1,188,764.2042614396 N;
+    # VEd=wEd*9/2*1000=260,036.8854258375 N; u=VEd/Vpl=0.21874555483220856.
+    result = WeldedChecker().check(context(), Design(600, 200, 10, 10))
+    assert result["Av_mm2"] == pytest.approx(5800.0, rel=1e-9)
+    assert result["V_pl_Rd_N"] == pytest.approx(1188764.2042614396, rel=1e-9)
+    assert result["V_Ed_N"] == pytest.approx(260036.8854258375, rel=1e-9)
+    assert result["u_shear"] == pytest.approx(0.21874555483220856, rel=1e-9)
+
+
+def test_shear_pass_failure_eta_self_weight_and_batch_states():
+    from dataclasses import replace
+    from ub_rl.config import CheckerConfig
+
+    d = Design(600, 200, 10, 10)
+    normal = WeldedChecker().check(context(), d)
+    heavy = WeldedChecker().check(Context(9.0, 6.0, 3.675, 30.0), d)
+    assert normal["passes_p14a_checks"]["shear_ok"] is True
+    assert heavy["passes_p14a_checks"]["shear_ok"] is False
+    eta = WeldedChecker(replace(CheckerConfig(), shear_eta=1.2)).check(context(), d)
+    assert eta["Av_mm2"] == pytest.approx(normal["Av_mm2"] * 1.2, rel=1e-9)
+    assert eta["V_pl_Rd_N"] == pytest.approx(normal["V_pl_Rd_N"] * 1.2, rel=1e-9)
+    no_weight = WeldedChecker(replace(CheckerConfig(), self_weight=False)).check(context(), d)
+    assert no_weight["V_Ed_N"] < normal["V_Ed_N"]
+    batch = WeldedChecker().evaluate_context(context(), [
+        d, Design(620, 200, 10, 10), Design(900, 450, 6, 8)])
+    for key in ("Av_mm2", "V_pl_Rd_N", "V_Ed_N", "u_shear"):
+        assert len(batch[key]) == 3
+        assert batch[key][0] is not None
+        assert batch[key][1:].tolist() == [None, None]
+    assert batch["passes_p14a_checks"]["shear_ok"].tolist()[1:] == [None, None]
+
+
+def test_gamma_m0_changes_plastic_shear_resistance_inversely():
+    from dataclasses import replace
+    from ub_rl.config import CheckerConfig
+
+    design = Design(600, 200, 10, 10)
+    base = WeldedChecker().check(context(), design)
+    increased = WeldedChecker(replace(CheckerConfig(), gamma_M0=1.25)).check(context(), design)
+    assert increased["Av_mm2"] == pytest.approx(base["Av_mm2"], rel=1e-9)
+    assert increased["V_pl_Rd_N"] == pytest.approx(base["V_pl_Rd_N"] / 1.25, rel=1e-9)
+
+
 @pytest.mark.parametrize("rule,ratio,uses_self_weight", [
     ("var360", 360.0, False), ("var200", 200.0, False), ("tot250", 250.0, True),
 ])
@@ -149,10 +195,11 @@ def test_config_can_disable_self_weight():
 
 
 def test_empty_batch_status_keys_match_nonempty_rows():
-    rows = WeldedChecker().evaluate_context(context(), [])
-    assert set(rows["passes_p14a_checks"]) == {
-        "geometry_valid", "class_ok", "depth_ok", "bending_ok", "deflection_ok"
-    }
+    checker = WeldedChecker()
+    empty = checker.evaluate_context(context(), [])
+    nonempty = checker.evaluate_context(context(), [Design(600, 200, 10, 10)])
+    assert set(empty) == set(nonempty)
+    assert set(empty["passes_p14a_checks"]) == set(nonempty["passes_p14a_checks"])
 
 
 def test_batch_valid_invalid_class4_rows_align():
